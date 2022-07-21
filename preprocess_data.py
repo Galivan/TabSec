@@ -43,14 +43,14 @@ def get_weights(df, target, show_heatmap=False):
             
     return weights.values
 
-def balance_df(df):
+def balance_df(df, target, SEED):
     len_df_0, len_df_1 = len(df[df[target] == 0.]), len(df[df[target] == 1.])
     df_0 = df[df[target] == 0.].sample(min(len_df_0, len_df_1), random_state=SEED)
     df_1 = df[df[target] == 1.].sample(min(len_df_0, len_df_1), random_state=SEED)
     df = pd.concat((df_0, df_1))
     return df
 
-def get_bounds():
+def get_bounds(df_orig):
     low_bounds = df_orig.min().values
     up_bounds = df_orig.max().values
     
@@ -60,7 +60,7 @@ def get_bounds():
     
     return [low_bounds, up_bounds]
 
-def split_train_test_valid():
+def split_train_test_valid(df, SEED):
     # Train test splits
     df_train, df_test = train_test_split(df, test_size=300, shuffle=True, random_state=SEED)
     df_test, df_valid = train_test_split(df_test, test_size=50, shuffle=True, random_state=SEED)
