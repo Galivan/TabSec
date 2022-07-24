@@ -18,12 +18,11 @@ def get_df(dataset):
     df[target] = df[target].apply(lambda x : 0.0 if x == 'bad' or x == 0.0 else 1)
     
     # Subsetting features to keep only continuous, discrete and ordered categorical
-    feature_names = ['checking_status', 'duration', 'credit_amount',
-                 'savings_status','employment','installment_commitment',
-                 'residence_since','age','existing_credits','num_dependents',
-                 'own_telephone','foreign_worker']
+    feature_names = ['duration', 'credit_amount',
+                 'installment_commitment',
+                 'residence_since','age','existing_credits','num_dependents']
     
     df = df[feature_names + [target]]
-    
+    df = df.astype(float)
     # Casting to float for later purpose
     return df, target, feature_names
