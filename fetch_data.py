@@ -26,5 +26,4 @@ def get_df(dataset):
     df = df[feature_names + [target]]
     
     # Casting to float for later purpose
-    df = df.astype(float)
     return df, target, feature_names
