@@ -34,6 +34,7 @@ class Trainer():
             total_loss = 0
             for i, (data, labels) in enumerate(train_loader):
                 # Forward pass
+                labels = labels.to(self.device)
                 predictions, loss_val = self.forward(data, labels)
 
                 # Backward pass
@@ -55,8 +56,7 @@ class Trainer():
         :param labels: True labels
         :return: (model predictions, loss on the data)
         """
-        data = data.reshape(-1, self.model.input_size).to(self.device)
-        labels = labels.to(self.device)
+        #data = data.to(self.device)
         predictions = self.model(data).to(self.device)
         loss_val = self.loss_function(predictions, labels)
         return predictions, loss_val
