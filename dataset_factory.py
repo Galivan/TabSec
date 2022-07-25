@@ -10,9 +10,11 @@ def get_train_test_dataset(config, dataset_name, test_size=None, train_size=None
     dataframe, target, features = fetch_data.get_df(dataset_name)
     train_df, test_df = train_test_split(dataframe, test_size=test_size, train_size=train_size,
                                          random_state=seed, shuffle=True)
-    # configurations needed for adversarial generation
-    weights = get_weights(dataframe, target)
+    
+    # Compute the bounds for clipping
     bounds = get_bounds(dataframe)
+    # Compute the weights modelizing the expert's knowledge
+    weights = get_weights(dataframe, target)
 
     config['TrainData'] = train_df
     config['TestData'] = test_df
