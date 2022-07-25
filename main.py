@@ -1,4 +1,6 @@
+import numpy as np
 import torch.nn
+import matplotlib.pyplot as plt
 
 import dataset_factory
 from torch.utils.data import DataLoader
@@ -9,7 +11,7 @@ from trainer import Trainer
 
 def main():
     settings = {'batch_size': 100,
-                'epochs': 400,
+                'epochs': 100,
                 'hidden_dim': 100,
                 'layers': 5,
                 'lr': 1e-4}
@@ -26,7 +28,14 @@ def main():
 
     trainer = Trainer(nn_model, device, loss_func, optimizer)
     trainer.train(settings['epochs'], train_dataloader)
-    data = trainer.get_data()
+    train_losses, train_accuracies = trainer.get_data()
+
+    fig, axs = plt.subplots()
+    x = np.arange(settings['epochs'])
+    axs.plot(x, train_losses, label="train_losses")
+    axs.plot(x, train_accuracies, label="train_accuracies")
+    axs.legend()
+    plt.show()
     pass
 
 

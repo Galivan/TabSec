@@ -13,12 +13,13 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.linears = nn.ModuleList([nn.Linear(D_in, H, dtype=float)])
         self.linears.extend(nn.ModuleList([nn.Linear(H, H, dtype=float) for i in range(1,layers_size - 1)]))
-        self.linears.extend(nn.ModuleList([nn.Linear(H, D_out, dtype=float)]))
+        self.last_linear = nn.Linear(H, D_out, dtype=float)
         self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=0)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         for linear in self.linears:
             x = self.relu(linear(x))
+        x = self.last_linear(x)
         y = self.softmax(x)
         return y
