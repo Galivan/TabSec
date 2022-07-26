@@ -1,6 +1,8 @@
 import torch
 import keras
 
+from keras.utils import np_utils
+
 class Trainer():
     """
     Class used to train a FCNN model
@@ -42,7 +44,7 @@ class Trainer():
                 self.backward(loss_val)
 
                 _, idxs = torch.max(predictions, 1)
-                prediction_label = torch.tensor(keras.utils.to_categorical(idxs.cpu(), num_classes=len(labels[0]))).to(self.device)
+                prediction_label = torch.tensor(keras.utils.np_utils.to_categorical(idxs.cpu(), num_classes=len(labels[0]))).to(self.device)
                 n_correct += 0.5*(prediction_label == labels).sum().item()
                 total_loss += loss_val.item()
 
