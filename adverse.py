@@ -7,6 +7,10 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 
+import tqdm
+from tqdm import tqdm
+from tqdm import tqdm_notebook
+
 
 def gen_adv(config, method):
     df_test = config['TestData']
