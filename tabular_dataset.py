@@ -1,4 +1,6 @@
+import keras
 import torch
+import numpy as np
 from torch.utils.data import Dataset
 
 
@@ -10,11 +12,12 @@ class TabularDataset(Dataset):
         self.dataframe = dataframe
         self.target = target
         self.features = features
-        self.features_tensor = torch.tensor(dataframe[features].values)
-        self.target_tensor = torch.tensor([dataframe[target].values]).T
+        self.features_tensor = torch.DoubleTensor(dataframe[features].values)
+        n_classes = len(np.unique(dataframe[target]))
+        self.target_tensor = torch.DoubleTensor(keras.utils.to_categorical(dataframe[target].values, num_classes=n_classes))
 
         self.features_dim = self.features_tensor.size(dim=1)
-        self.target_dim = 1
+        self.target_dim = self.target_tensor.size(dim=1)
 
         self.transform = transform
         self.target_transform = target_transform

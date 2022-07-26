@@ -1,4 +1,5 @@
 import torch
+import keras
 
 class Trainer():
     """
@@ -40,11 +41,12 @@ class Trainer():
                 # Backward pass
                 self.backward(loss_val)
 
-                _, prediction_label = torch.max(predictions, 1)
-                n_correct += (prediction_label == labels).sum().item()
+                _, idxs = torch.max(predictions, 1)
+                prediction_label = torch.tensor(keras.utils.to_categorical(idxs.cpu(), num_classes=len(labels[0]))).to(self.device)
+                n_correct += 0.5*(prediction_label == labels).sum().item()
                 total_loss += loss_val.item()
 
-            train_acc = 100.0 * n_correct / (len(train_loader) * train_loader.batch_size)
+            train_acc = n_correct / (len(train_loader) * train_loader.batch_size)
             train_loss = total_loss/len(train_loader)
             self.train_losses.append(train_loss)
             self.train_accuracies.append(train_acc)
