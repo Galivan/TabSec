@@ -21,7 +21,7 @@ def main():
                 'hidden_dim'   : 100,
                 'layers'       : 5,
                 'lr'           : 1e-4,
-                'MaxIters'     : 20000,
+                'MaxIters'     : 20,
                 'Alpha'        : 0.001,
                 'Lambda'       : 8.5
     }

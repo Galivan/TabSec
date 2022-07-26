@@ -23,6 +23,6 @@ def get_df(dataset):
                  'residence_since','age','existing_credits','num_dependents']
     
     df = df[feature_names + [target]]
-    df = df.astype(float)
     # Casting to float for later purpose
+    df = df.astype(float)
     return df, target, feature_names

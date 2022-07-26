@@ -25,9 +25,9 @@ def gen_adv(config, method):
     results = np.zeros((len(df_test), len(feature_names)))    
             
     i = -1
-    for _, row in tqdm_notebook(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
+    for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
         i += 1
-        x_tensor = torch.FloatTensor(row[config['FeatureNames']])   
+        x_tensor = torch.DoubleTensor(row[config['FeatureNames']])   
         
         if method == 'LowProFool':
             orig_pred, adv_pred, x_adv, loop_i = lowProFool(x_tensor, model, weights, bounds,
@@ -72,7 +72,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
     orig_pred = output.max(0, keepdim=True)[1].cpu().numpy()
     target_pred = np.abs(1 - orig_pred)
     
-    target = [0., 1.] if target_pred == 1 else [1., 0.]
+    target = np.array([0., 1.]) if target_pred == 1 else np.array([1., 0.])
     target = Variable(torch.tensor(target, requires_grad=False)) 
     
     lambda_ = torch.tensor([lambda_])
