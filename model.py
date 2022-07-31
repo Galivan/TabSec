@@ -15,11 +15,15 @@ class Net(nn.Module):
         self.linears.extend(nn.ModuleList([nn.Linear(H, H, dtype=float) for i in range(1,layers_size - 1)]))
         self.last_linear = nn.Linear(H, D_out, dtype=float)
         self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax1 = nn.Softmax(dim=1)
+        self.softmax0 = nn.Softmax(dim=0)
 
     def forward(self, x):
         for linear in self.linears:
             x = self.relu(linear(x))
         x = self.last_linear(x)
-        y = self.softmax(x)
+        if (x.dim() == 1):
+            y = self.softmax0(x)
+        else:
+            y = self.softmax1(x)
         return y
