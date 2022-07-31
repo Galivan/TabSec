@@ -8,6 +8,7 @@ import dataset_factory
 from torch.utils.data import DataLoader
 
 from model import Net
+from tabular_dataset import TabularDataset
 from trainer import Trainer
 from adverse import gen_adv
 
@@ -28,7 +29,7 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     credit_g = 'credit-g'
-    credit_g_train, credit_g_test= dataset_factory.get_train_test_dataset(settings, credit_g, test_size=300)
+    credit_g_train, credit_g_test = dataset_factory.get_train_test_dataset(settings, credit_g, test_size=300)
 
 
     train_dataloader = DataLoader(credit_g_train, batch_size=settings['batch_size'], shuffle=True)
@@ -60,7 +61,25 @@ def main():
     df_adv_lpf = gen_adv(settings, 'LowProFool')
     df_adv_df = gen_adv(settings, 'Deepfool')
     settings['AdvData'] = {'LowProFool' : df_adv_lpf, 'Deepfool' : df_adv_df}
-    
+
+    # Fine-tune model using LPF examples
+    ft_dataset = TabularDataset(df_adv_lpf, settings['FeatureNames'], settings['Target'], True)
+    ft_dataloader = DataLoader(ft_dataset, batch_size=1, shuffle=True)
+
+    ft_loss_func = torch.nn.BCELoss()
+    ft_optimizer = torch.optim.Adam(nn_model.parameters(), lr=0.1*settings['lr'])
+
+    ft_trainer = Trainer(nn_model, device, ft_loss_func, ft_optimizer)
+    ft_trainer.train(0.1*settings['epochs'], ft_dataloader)
+    ft_train_losses, ft_train_accuracies = trainer.get_data()
+
+    fig, axs = plt.subplots()
+    x = np.arange(settings['epochs'])
+    axs.plot(x, ft_train_losses, label="train_losses")
+    axs.plot(x, ft_train_accuracies, label="train_accuracies")
+    axs.legend()
+    plt.show()
+
     pass
 
 
