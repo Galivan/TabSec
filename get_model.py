@@ -62,9 +62,9 @@ def get_model(conf, layers_size=3,  load=False):
     feature_names = conf['FeatureNames']
     
     n_classes = len(np.unique(df[target]))
-    X_train = torch.FloatTensor(df[feature_names].values)
+    X_train = torch.DoubleTensor(df[feature_names].values)
     y_train = keras.utils.to_categorical(df[target], n_classes)
-    y_train = torch.FloatTensor(y_train)
+    y_train = torch.DoubleTensor(y_train)
     
     D_in = X_train.size(1)
     D_out = y_train.size(1)
