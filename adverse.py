@@ -21,8 +21,9 @@ def gen_adv(config, method):
     maxiters = config['MaxIters']
     alpha = config['Alpha']
     lambda_ = config['Lambda']
+    target = config['Target']
     
-    results = np.zeros((len(df_test), len(feature_names)))    
+    results = np.zeros((len(df_test), len(feature_names) + 1))
             
     i = -1
     for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
@@ -37,9 +38,9 @@ def gen_adv(config, method):
                                                           bounds, weights=[])
         else:
             raise Exception("Invalid method", method)
-        results[i] = x_adv
-        
-    return pd.DataFrame(results, index=df_test.index, columns = feature_names)
+        results[i] = np.append(x_adv, orig_pred)
+    df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
+    return df
 
 
 # Clipping function

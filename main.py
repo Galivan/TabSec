@@ -22,8 +22,8 @@ def main():
                 'hidden_dim'   : 100,
                 'layers'       : 5,
                 'lr'           : 1e-4,
-                'MaxIters'     : 20,
-                'Alpha'        : 0.001,
+                'MaxIters'     : 20000,
+                'Alpha'        : 0.1,
                 'Lambda'       : 8.5
     }
 
@@ -47,13 +47,12 @@ def main():
     trainer.train(settings['epochs'], train_dataloader)
     train_losses, train_accuracies = trainer.get_data()
 
-    fig, axs = plt.subplots()
+    fig, axs = plt.subplots(2, 2)
     x = np.arange(settings['epochs'])
-    axs.plot(x, train_losses, label="train_losses")
-    axs.plot(x, train_accuracies, label="train_accuracies")
-    axs.legend()
-    plt.show()
-
+    axs[0, 0].plot(x, train_losses, label="train_losses")
+    axs[0, 0].set_title("train_losses")
+    axs[0, 1].plot(x, train_accuracies, label="train_accuracies")
+    axs[0, 1].set_title("train_accuracies")
     # Sub sample
     settings['TestData'] = settings['TestData'].sample(n=10, random_state = SEED)
 
@@ -70,14 +69,14 @@ def main():
     ft_optimizer = torch.optim.Adam(nn_model.parameters(), lr=0.1*settings['lr'])
 
     ft_trainer = Trainer(nn_model, device, ft_loss_func, ft_optimizer)
-    ft_trainer.train(0.1*settings['epochs'], ft_dataloader)
-    ft_train_losses, ft_train_accuracies = trainer.get_data()
+    ft_trainer.train(settings['epochs']//10, ft_dataloader)
+    ft_train_losses, ft_train_accuracies = ft_trainer.get_data()
 
-    fig, axs = plt.subplots()
-    x = np.arange(settings['epochs'])
-    axs.plot(x, ft_train_losses, label="train_losses")
-    axs.plot(x, ft_train_accuracies, label="train_accuracies")
-    axs.legend()
+    x = np.arange(settings['epochs']//10)
+    axs[1, 0].plot(x, ft_train_losses, label="ft_train_losses")
+    axs[1, 0].set_title("ft_train_losses")
+    axs[1, 1].plot(x, ft_train_accuracies, label="ft_train_accuracies")
+    axs[1, 1].set_title("ft_train_accuracies")
     plt.show()
 
     pass
