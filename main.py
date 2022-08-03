@@ -11,6 +11,8 @@ from model import Net
 from trainer import Trainer
 from adverse import gen_adv
 
+from IPython.display import display
+
 SEED = 0
 
 
@@ -21,7 +23,7 @@ def main():
                 'hidden_dim'   : 100,
                 'layers'       : 5,
                 'lr'           : 1e-4,
-                'MaxIters'     : 20,
+                'MaxIters'     : 20000,
                 'Alpha'        : 0.001,
                 'Lambda'       : 8.5
     }
@@ -51,13 +53,14 @@ def main():
     axs.plot(x, train_losses, label="train_losses")
     axs.plot(x, train_accuracies, label="train_accuracies")
     axs.legend()
-    plt.show()
+    #plt.show()
 
     # Sub sample
-    settings['TestData'] = settings['TestData'].sample(n=10, random_state = SEED)
-
+    settings['TestData'] = settings['TestData'].sample(n=2, random_state = SEED)
+    display(settings['TestData'])
     # Generate adversarial examples
     df_adv_lpf = gen_adv(settings, 'LowProFool')
+    display(df_adv_lpf)
     df_adv_df = gen_adv(settings, 'Deepfool')
     settings['AdvData'] = {'LowProFool' : df_adv_lpf, 'Deepfool' : df_adv_df}
     

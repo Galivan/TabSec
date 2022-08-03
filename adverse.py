@@ -13,6 +13,7 @@ from tqdm import tqdm_notebook
 
 
 def gen_adv(config, method):
+    extra_cols = ['orig_pred', 'adv_pred', 'iters']
     df_test = config['TestData']
     feature_names = config['FeatureNames']
     model = config['Model']
@@ -22,7 +23,7 @@ def gen_adv(config, method):
     alpha = config['Alpha']
     lambda_ = config['Lambda']
     
-    results = np.zeros((len(df_test), len(feature_names)))    
+    results = np.zeros((len(df_test), len(feature_names) + len(extra_cols)))    
             
     i = -1
     for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
@@ -37,9 +38,11 @@ def gen_adv(config, method):
                                                           bounds, weights=[])
         else:
             raise Exception("Invalid method", method)
-        results[i] = x_adv
         
-    return pd.DataFrame(results, index=df_test.index, columns = feature_names)
+        results[i] = np.concatenate((x_adv, [orig_pred, adv_pred, loop_i]), axis=0)
+        
+        
+    return pd.DataFrame(results, index=df_test.index, columns = feature_names + extra_cols)
 
 
 # Clipping function
@@ -89,6 +92,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
             
         if r.grad is not None:
             r.grad.zero_()
+        
         # Computing loss 
         loss_1 = bce(output, target)
         loss_2 = l2(v, r)
@@ -97,7 +101,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
         # Get the gradient
         loss.backward(retain_graph=True)
         grad_r = r.grad.data.cpu().numpy().copy()
-        
+
         # Guide perturbation to the negative of the gradient
         ri = - grad_r
     
@@ -115,7 +119,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
         
         # Compute adversarial example
         xprime = x + r
-        
+    
         # Clip to stay in legitimate bounds
         xprime = clip(xprime, bounds[0], bounds[1])
         
