@@ -17,7 +17,7 @@ class TabularDataset(Dataset):
         self.features = features
         self.features_tensor = torch.DoubleTensor(dataframe[features].values)
         n_classes = len(np.unique(dataframe[target]))
-        self.target_tensor = torch.DoubleTensor(keras.utils.np_utils.to_categorical(dataframe[target].values, num_classes=n_classes))
+        self.target_tensor = torch.DoubleTensor(keras.utils.np_utils.to_categorical(dataframe[target].values, num_classes=2))
 
         self.features_dim = self.features_tensor.size(dim=1)
         self.target_dim = self.target_tensor.size(dim=1)
