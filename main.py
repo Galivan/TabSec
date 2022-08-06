@@ -36,7 +36,7 @@ def main():
 
 
     train_dataloader = DataLoader(credit_g_train, batch_size=settings['batch_size'], shuffle=True)
-    test_dataloader = DataLoader(credit_g_test, batch_size=settings['batch_size'], shuffle=True)
+    test_dataloader = DataLoader(credit_g_test, batch_size=len(credit_g_test))
     d_in, d_out = credit_g_train.get_dimensions()
 
     nn_model = Net(d_in, settings['hidden_dim'], d_out, settings['layers'])
@@ -50,9 +50,9 @@ def main():
     trainer.train(settings['epochs'], train_dataloader)
     train_losses, train_accuracies = trainer.get_data()
 
-    # tester = Tester(nn_model, device, loss_func)
-    # test_acc= tester.test(test_dataloader)
-    # print(f'Accuracy of the network on test set: {test_acc} %')
+    tester = Tester(nn_model, device, loss_func)
+    test_acc, loss = tester.test(test_dataloader)
+    print(f'Accuracy of the network on test set: {test_acc}, total loss: {loss}')
 
     fig, axs = plt.subplots(2, 2)
     x = np.arange(settings['epochs'])
