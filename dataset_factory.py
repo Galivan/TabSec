@@ -20,6 +20,9 @@ def get_train_test_dataset(config, dataset_name, test_size=None, train_size=None
     
 
 
+
+    train_df, test_df = train_test_split(dataframe, test_size=test_size, train_size=train_size,
+                                         random_state=seed, shuffle=True)
     config['TrainData'] = train_df
     config['TestData'] = test_df
     config['Target'] = target

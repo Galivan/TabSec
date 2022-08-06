@@ -13,6 +13,7 @@ from tqdm import tqdm_notebook
 
 
 def gen_adv(config, method):
+    extra_cols = ['orig_pred', 'adv_pred', 'iters']
     df_test = config['TestData']
     feature_names = config['FeatureNames']
     model = config['Model']
@@ -26,9 +27,14 @@ def gen_adv(config, method):
     results = np.zeros((len(df_test), len(feature_names) + 1))
             
     i = -1
+    n_samples = 0
+    n_success = 0
+    total_pert_norm = 0
+    total_weighed_pert_norm = 0
     for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
         i += 1
-        x_tensor = torch.DoubleTensor(row[config['FeatureNames']])   
+        x_tensor = torch.DoubleTensor(row[config['FeatureNames']])
+        n_samples += 1
         
         if method == 'LowProFool':
             orig_pred, adv_pred, x_adv, loop_i = lowProFool(x_tensor, model, weights, bounds,
@@ -38,9 +44,19 @@ def gen_adv(config, method):
                                                           bounds, weights=[])
         else:
             raise Exception("Invalid method", method)
+
+        pert = x_adv - x_tensor.numpy()
+
+        if orig_pred != adv_pred:
+            n_success += 1
+            total_pert_norm += np.linalg.norm(pert)
+            total_weighed_pert_norm += np.linalg.norm(weights * pert)
+
         results[i] = np.append(x_adv, orig_pred)
+    mean_pert_norm = total_pert_norm / n_success
+    mean_weighted_pert_norm = total_weighed_pert_norm / n_success
     df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
-    return df
+    return df, n_success/n_samples, mean_pert_norm, mean_weighted_pert_norm
 
 
 # Clipping function
@@ -68,8 +84,8 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
 
     r = Variable(torch.FloatTensor(1e-4 * np.ones(x.numpy().shape)), requires_grad=True) 
     v = torch.FloatTensor(np.array(weights))
-    
-    output = model.forward(x + r)
+
+    output = model.forward(x)
     orig_pred = output.max(0, keepdim=True)[1].cpu().numpy()
     target_pred = np.abs(1 - orig_pred)
     
@@ -81,7 +97,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
     bce = nn.BCELoss()
     l1 = lambda v, r: torch.sum(torch.abs(v * r)) #L1 norm
     l2 = lambda v, r: torch.sqrt(torch.sum(torch.mul(v * r,v * r))) #L2 norm
-    
+
     best_norm_weighted = np.inf
     best_pert_x = x
     
@@ -90,6 +106,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
             
         if r.grad is not None:
             r.grad.zero_()
+        
         # Computing loss 
         loss_1 = bce(output, target)
         loss_2 = l2(v, r)
@@ -98,7 +115,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
         # Get the gradient
         loss.backward(retain_graph=True)
         grad_r = r.grad.data.cpu().numpy().copy()
-        
+
         # Guide perturbation to the negative of the gradient
         ri = - grad_r
     
@@ -116,7 +133,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
         
         # Compute adversarial example
         xprime = x + r
-        
+    
         # Clip to stay in legitimate bounds
         xprime = clip(xprime, bounds[0], bounds[1])
         
@@ -126,6 +143,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
         
         # Keep the best adverse at each iterations
         if output_pred != orig_pred and r_norm_weighted < best_norm_weighted:
+            best_r = r
             best_norm_weighted = r_norm_weighted
             best_pert_x = xprime
 
@@ -139,7 +157,7 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
     output = model.forward(best_pert_x)
     output_pred = output.max(0, keepdim=True)[1].cpu().numpy()
 
-    return orig_pred, output_pred, best_pert_x.clone().detach().cpu().numpy(), loop_change_class 
+    return orig_pred, output_pred, best_pert_x.clone().detach().cpu().numpy(), loop_change_class
 
 # Forked from https://github.com/LTS4/DeepFool
 def deepfool(x_old, net, maxiters, alpha, bounds, weights=[], overshoot=0.002):
@@ -222,4 +240,4 @@ def deepfool(x_old, net, maxiters, alpha, bounds, weights=[], overshoot=0.002):
     r_tot = (1+overshoot)*r_tot    
     pert_x = clip(pert_x, bounds[0], bounds[1])
 
-    return orig_pred, k_i, pert_x.cpu(), loop_i
+    return orig_pred, k_i, pert_x.clone().detach().cpu().numpy(), loop_i
