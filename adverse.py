@@ -29,8 +29,8 @@ def gen_adv(config, method):
     i = -1
     n_samples = 0
     n_success = 0
-    total_pert_norm = 0
-    total_weighed_pert_norm = 0
+    pert_norms = []
+    weighted_pert_norms = []
     for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
         i += 1
         x_tensor = torch.DoubleTensor(row[config['FeatureNames']])
@@ -49,14 +49,12 @@ def gen_adv(config, method):
 
         if orig_pred != adv_pred:
             n_success += 1
-            total_pert_norm += np.linalg.norm(pert)
-            total_weighed_pert_norm += np.linalg.norm(weights * pert)
+            pert_norms.append(np.linalg.norm(pert))
+            weighted_pert_norms.append(np.linalg.norm(weights * pert))
 
         results[i] = np.append(x_adv, orig_pred)
-    mean_pert_norm = total_pert_norm / n_success
-    mean_weighted_pert_norm = total_weighed_pert_norm / n_success
     df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
-    return df, n_success/n_samples, mean_pert_norm, mean_weighted_pert_norm
+    return df, n_success/n_samples, pert_norms, weighted_pert_norms
 
 
 # Clipping function
