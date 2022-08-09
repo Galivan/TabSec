@@ -1,18 +1,21 @@
+import copy
+
 import numpy as np
 import torch.nn
 import matplotlib.pyplot as plt
 
 import dataset_factory
 
-
 from torch.utils.data import DataLoader
 
+import defense
 import metrics
+import tester
 from model import Net
 from tabular_dataset import TabularDataset
-from trainer import Trainer
-from tester import Tester
+from trainer import Trainer, train_bce_adam_model
 from adverse import gen_adv
+
 
 from IPython.display import display
 
@@ -21,84 +24,53 @@ SEED = 0
 
 def main():
     # + configurations for adversarial generation
-    settings = {'batch_size'   : 100,
-                'epochs'       : 100,
-                'hidden_dim'   : 100,
-                'layers'       : 5,
-                'lr'           : 1e-4,
-                'MaxIters'     : 20000,
-                'Alpha'        : 0.001,
-                'Lambda'       : 8.5
-    }
+    settings = {'batch_size': 100,
+                'epochs': 500,
+                'hidden_dim': 100,
+                'layers': 5,
+                'lr': 1e-4,
+                'MaxIters': 20000,
+                'Alpha': 0.001,
+                'Lambda': 8.5
+                }
 
     plt.figure(figsize=(15, 10))
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    credit_g = 'credit-g'
-    credit_g_train, credit_g_test = dataset_factory.get_train_test_dataset(settings, credit_g, test_size=300)
-
-
-    train_dataloader = DataLoader(credit_g_train, batch_size=settings['batch_size'], shuffle=True)
-    test_dataloader = DataLoader(credit_g_test, batch_size=len(credit_g_test))
-    d_in, d_out = credit_g_train.get_dimensions()
-
-    nn_model = Net(d_in, settings['hidden_dim'], d_out, settings['layers'])
-
+    train_dataloader, test_dataloader, dimensions = dataset_factory.get_credit_g_dataloaders(settings)
+    nn_model = Net(dimensions[0], settings['hidden_dim'], dimensions[1], settings['layers'])
     settings["Model"] = nn_model
 
-    loss_func = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(nn_model.parameters(), lr=settings['lr'])
+    train_losses, train_accuracies = train_bce_adam_model(nn_model, device, train_dataloader, settings['lr'], settings['epochs'])
+    test_data = tester.test_bce_model(nn_model, device, test_dataloader)
 
-    trainer = Trainer(nn_model, device, loss_func, optimizer)
-    trainer.train(settings['epochs'], train_dataloader)
-    train_losses, train_accuracies = trainer.get_data()
+    fig, axs = plt.subplots(2, 1)
+    x = np.arange(settings['epochs'])
+    axs[0].plot(x, train_losses, label="train_losses")
+    axs[0].set_title("train_losses")
+    axs[1].plot(x, train_accuracies, label="train_accuracies")
+    axs[1].set_title("train_accuracies")
+    plt.show()
 
-    tester = Tester(nn_model, device, loss_func)
-    test_acc, loss = tester.test(test_dataloader)
-    print(f'Accuracy of the network on test set: {test_acc}, total loss: {loss}')
-
-    # fig, axs = plt.subplots(2, 2)
-    # x = np.arange(settings['epochs'])
-    # axs[0, 0].plot(x, train_losses, label="train_losses")
-    # axs[0, 0].set_title("train_losses")
-    # axs[0, 1].plot(x, train_accuracies, label="train_accuracies")
-    # axs[0, 1].set_title("train_accuracies")
-    
     # Sub sample
-    settings['TestData'] = settings['TestData'].sample(n=10, random_state = SEED)
-    #display(settings['TestData'])
+    settings['TestData'] = settings['TestData'].sample(n=2, random_state=SEED)
+
     # Generate adversarial examples
-    df_adv_lpf, *lpf_data = gen_adv(settings, 'LowProFool')
-    #display(df_adv_lpf)
-    df_adv_df, *df_data = gen_adv(settings, 'Deepfool')
-    settings['AdvData'] = {'LowProFool' : df_adv_lpf, 'Deepfool' : df_adv_df}
+    df_adv_lpf, *lpf_data = gen_adv(nn_model, settings, 'LowProFool')
+    # display(df_adv_lpf)
+    df_adv_df, *df_data = gen_adv(nn_model,settings, 'Deepfool')
+    lpf_data.extend(test_data)
+    df_data.extend(test_data)
+    settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
 
-    # Fine-tune model using LPF examples
-    ft_dataset = TabularDataset(df_adv_lpf, settings['FeatureNames'], settings['Target'], True)
-    ft_dataloader = DataLoader(ft_dataset, batch_size=1, shuffle=True)
+    # Test fine-tuning method on LowProFool
+    ft_lpf_model_clone = copy.deepcopy(nn_model)
+    defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_data, settings)
 
-    ft_loss_func = torch.nn.BCELoss()
-    ft_optimizer = torch.optim.Adam(nn_model.parameters(), lr=0.1*settings['lr'])
+    # Test fine-tuning method on LowProFool
+    ft_df_model_clone = copy.deepcopy(nn_model)
+    defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_data, settings)
 
-    ft_trainer = Trainer(nn_model, device, ft_loss_func, ft_optimizer)
-    ft_trainer.train(settings['epochs']//10, ft_dataloader)
-    ft_train_losses, ft_train_accuracies = ft_trainer.get_data()
-
-    x = np.arange(settings['epochs']//10)
-    # axs[1, 0].plot(x, ft_train_losses, label="ft_train_losses")
-    # axs[1, 0].set_title("ft_train_losses")
-    # axs[1, 1].plot(x, ft_train_accuracies, label="ft_train_accuracies")
-    # axs[1, 1].set_title("ft_train_accuracies")
-
-
-    df_adv_lpf, *lpf_data_after_ft = gen_adv(settings, 'LowProFool')
-    df_adv_df, *df_data_after_ft = gen_adv(settings, 'Deepfool')
-
-    metrics.plot_metrics(lpf_data, lpf_data_after_ft, "LPF")
-    plt.show()
-
-    metrics.plot_metrics(df_data, df_data_after_ft, "DF")
-    plt.show()
 
 if __name__ == "__main__":
     main()
