@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 import torch.nn
 import matplotlib.pyplot as plt
@@ -6,13 +8,14 @@ import dataset_factory
 
 from torch.utils.data import DataLoader
 
+import defense
 import metrics
 import tester
 from model import Net
 from tabular_dataset import TabularDataset
 from trainer import Trainer, train_bce_adam_model
 from adverse import gen_adv
-from defense import fine_tune_model
+
 
 from IPython.display import display
 
@@ -51,27 +54,22 @@ def main():
 
     # Sub sample
     settings['TestData'] = settings['TestData'].sample(n=2, random_state=SEED)
-    # display(settings['TestData'])
+
     # Generate adversarial examples
-    df_adv_lpf, *lpf_data = gen_adv(settings, 'LowProFool')
+    df_adv_lpf, *lpf_data = gen_adv(nn_model, settings, 'LowProFool')
     # display(df_adv_lpf)
-    df_adv_df, *df_data = gen_adv(settings, 'Deepfool')
+    df_adv_df, *df_data = gen_adv(nn_model,settings, 'Deepfool')
     lpf_data.extend(test_data)
     df_data.extend(test_data)
     settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
 
-    # Fine-tune model using LPF examples
-    fine_tune_model(nn_model, device, df_adv_lpf, settings)
-    test_data_after_ft = tester.test_bce_model(nn_model, device, test_dataloader)
+    # Test fine-tuning method on LowProFool
+    ft_lpf_model_clone = copy.deepcopy(nn_model)
+    defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_data, settings)
 
-    df_adv_lpf, *lpf_data_after_ft = gen_adv(settings, 'LowProFool')
-    df_adv_df, *df_data_after_ft = gen_adv(settings, 'Deepfool')
-
-    lpf_data_after_ft.extend(test_data_after_ft)
-    df_data_after_ft.extend(test_data_after_ft)
-
-    metrics.plot_metrics(lpf_data, lpf_data_after_ft, "LowProFool")
-    metrics.plot_metrics(df_data, df_data_after_ft, "DeepFool")
+    # Test fine-tuning method on LowProFool
+    ft_df_model_clone = copy.deepcopy(nn_model)
+    defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_data, settings)
 
 
 if __name__ == "__main__":

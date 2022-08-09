@@ -12,11 +12,10 @@ from tqdm import tqdm
 from tqdm import tqdm_notebook
 
 
-def gen_adv(config, method):
+def gen_adv(model, config, method):
     extra_cols = ['orig_pred', 'adv_pred', 'iters']
     df_test = config['TestData']
     feature_names = config['FeatureNames']
-    model = config['Model']
     weights = config['Weights']
     bounds = config['Bounds']
     maxiters = config['MaxIters']
