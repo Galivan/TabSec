@@ -28,11 +28,11 @@ class Tester():
                 n_correct += 0.5*(prediction_label == labels).sum().item()
 
             acc = n_correct / n_samples
-            return acc, total_loss
+            return total_loss, acc
 
 
 def test_bce_model(model, device, test_dataloader):
     loss_func = torch.nn.BCELoss()
     tester = Tester(model, device, loss_func)
-    test_acc, loss = tester.test(test_dataloader)
-    return test_acc, loss
+    return tester.test(test_dataloader)
+

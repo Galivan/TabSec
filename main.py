@@ -39,8 +39,7 @@ def main():
     settings["Model"] = nn_model
 
     train_losses, train_accuracies = train_bce_adam_model(nn_model, device, train_dataloader, settings['lr'], settings['epochs'])
-    test_acc, loss = tester.test_bce_model(nn_model, device, test_dataloader)
-    print(f'Accuracy of the network on test set: {test_acc}, total loss: {loss}')
+    test_data = tester.test_bce_model(nn_model, device, test_dataloader)
 
     fig, axs = plt.subplots(2, 1)
     x = np.arange(settings['epochs'])
@@ -51,25 +50,28 @@ def main():
     plt.show()
 
     # Sub sample
-    settings['TestData'] = settings['TestData'].sample(n=10, random_state=SEED)
+    settings['TestData'] = settings['TestData'].sample(n=2, random_state=SEED)
     # display(settings['TestData'])
     # Generate adversarial examples
     df_adv_lpf, *lpf_data = gen_adv(settings, 'LowProFool')
     # display(df_adv_lpf)
     df_adv_df, *df_data = gen_adv(settings, 'Deepfool')
+    lpf_data.extend(test_data)
+    df_data.extend(test_data)
     settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
 
     # Fine-tune model using LPF examples
-    ft_train_losses, ft_train_accuracies = fine_tune_model(nn_model, device, df_adv_lpf, settings)
+    fine_tune_model(nn_model, device, df_adv_lpf, settings)
+    test_data_after_ft = tester.test_bce_model(nn_model, device, test_dataloader)
 
     df_adv_lpf, *lpf_data_after_ft = gen_adv(settings, 'LowProFool')
     df_adv_df, *df_data_after_ft = gen_adv(settings, 'Deepfool')
 
-    metrics.plot_metrics(lpf_data, lpf_data_after_ft, "LPF")
-    plt.show()
+    lpf_data_after_ft.extend(test_data_after_ft)
+    df_data_after_ft.extend(test_data_after_ft)
 
-    metrics.plot_metrics(df_data, df_data_after_ft, "DF")
-    plt.show()
+    metrics.plot_metrics(lpf_data, lpf_data_after_ft, "LowProFool")
+    metrics.plot_metrics(df_data, df_data_after_ft, "DeepFool")
 
 
 if __name__ == "__main__":

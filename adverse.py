@@ -54,7 +54,8 @@ def gen_adv(config, method):
 
         results[i] = np.append(x_adv, orig_pred)
     df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
-    return df, n_success/n_samples, pert_norms, weighted_pert_norms
+    return df, n_success/n_samples, np.mean(weighted_pert_norms), np.std(weighted_pert_norms),\
+                                    np.mean(pert_norms), np.std(pert_norms)
 
 
 # Clipping function

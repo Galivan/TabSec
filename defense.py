@@ -24,4 +24,4 @@ def fine_tune_model(model, device, adverse_data, settings):
     ft_lr = ft_settings['lr_ratio'] * settings['lr']
     ft_epochs = ft_settings['epochs_ratio'] * settings['epochs']
 
-    ft_train_losses, ft_train_accuracies = train_bce_adam_model(model, device, ft_dataloader, ft_lr, ft_epochs)
+    return train_bce_adam_model(model, device, ft_dataloader, ft_lr, ft_epochs)
