@@ -8,6 +8,17 @@ from preprocess_data import get_bounds, get_weights, normalize
 
 
 def get_train_test_dataset(settings, dataset_name, test_size=None, train_size=None, seed=0, transform=None, target_transform=None):
+    """
+    Get train-test split dataset.
+    :param settings: General settings
+    :param dataset_name: Name of the requested dataset from OpenML
+    :param test_size: Size of test samples.
+    :param train_size: Size of train samples.
+    :param seed: Random seed
+    :param transform: Transformation to apply to the data
+    :param target_transform: Transformation to apply to the target
+    :return: Train dataset and Test datasets as TabularDatasets.
+    """
     dataframe, target, features = fetch_data.get_df(dataset_name)
 
     # Compute the bounds for clipping

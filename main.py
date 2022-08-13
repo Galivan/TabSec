@@ -29,7 +29,7 @@ def main():
                 'hidden_dim': 100,
                 'layers': 5,
                 'lr': 1e-4,
-                'MaxIters': 20000,
+                'MaxIters': 2000,
                 'Alpha': 0.001,
                 'Lambda': 8.5
                 }
@@ -53,23 +53,27 @@ def main():
     plt.show()
 
     # Sub sample
-    settings['TestData'] = settings['TestData'].sample(n=2, random_state=SEED)
+    settings['TrainAdv'] = settings['TrainData'].sample(n=10, random_state=SEED)
+    settings['TestAdv'] = settings['TestData'].sample(n=5, random_state=SEED)
 
     # Generate adversarial examples
-    df_adv_lpf, *lpf_data = gen_adv(nn_model, settings, 'LowProFool')
-    # display(df_adv_lpf)
-    df_adv_df, *df_data = gen_adv(nn_model,settings, 'Deepfool')
-    lpf_data.extend(test_data)
-    df_data.extend(test_data)
+    df_adv_lpf, *lpf_train_data = gen_adv(nn_model, settings, 'LowProFool', settings['TrainAdv'])
+    _, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool', settings['TestAdv'])
+
+    df_adv_df, *df_train_data = gen_adv(nn_model, settings, 'Deepfool', settings['TrainAdv'])
+    _, *df_test_data = gen_adv(nn_model, settings, 'Deepfool', settings['TestAdv'])
+
+    lpf_test_data.extend(test_data)
+    df_test_data.extend(test_data)
     settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
 
     # Test fine-tuning method on LowProFool
     ft_lpf_model_clone = copy.deepcopy(nn_model)
-    defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_data, settings)
+    defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_test_data, settings)
 
     # Test fine-tuning method on LowProFool
     ft_df_model_clone = copy.deepcopy(nn_model)
-    defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_data, settings)
+    defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_test_data, settings)
 
 
 if __name__ == "__main__":
