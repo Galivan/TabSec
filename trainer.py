@@ -3,7 +3,8 @@ import keras
 
 from keras.utils import np_utils
 
-class Trainer():
+
+class Trainer:
     """
     Class used to train a FCNN model
     """
@@ -31,7 +32,7 @@ class Trainer():
         :return: None
         """
         for epoch in range(num_epochs):
-            if (epoch + 1) % 10 == 0:
+            if (epoch + 1) % 100 == 0:
                 print(f'Epoch [{epoch + 1}/{num_epochs}]...')
             n_correct = 0
             total_loss = 0
@@ -81,4 +82,12 @@ class Trainer():
         :return: train_losses, train_acc
         """
         return self.train_losses, self.train_accuracies
-    
+
+
+def train_bce_adam_model(model, device, train_dataloader, lr, epochs):
+    loss_func = torch.nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    trainer = Trainer(model, device, loss_func, optimizer)
+    trainer.train(epochs, train_dataloader)
+    return trainer.get_data()
