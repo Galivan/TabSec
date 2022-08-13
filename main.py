@@ -67,7 +67,7 @@ def main():
     ft_lpf_model_clone = copy.deepcopy(nn_model)
     defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_data, settings)
 
-    # Test fine-tuning method on LowProFool
+    # Test fine-tuning method on DeepFool
     ft_df_model_clone = copy.deepcopy(nn_model)
     defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_data, settings)
 

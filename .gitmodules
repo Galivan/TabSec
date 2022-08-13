@@ -1,0 +1,3 @@
+[submodule "tabnet"]
+	path = tabnet
+	url = https://github.com/dreamquark-ai/tabnet.git
