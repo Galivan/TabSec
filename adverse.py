@@ -12,9 +12,22 @@ from tqdm import tqdm
 from tqdm import tqdm_notebook
 
 
-def gen_adv(model, config, method):
+def gen_adv(model, config, method, df_test):
+    """
+    Generate adversarial examples from given data, using a specific method
+    :param model: NN Model we want to fool
+    :param config: General configuration
+    :param method: Adversarial method name
+    :param df_test: Data to make adversarial examples from
+    :return: Dataframe of adversarial examples with original target
+             Success rate of the method - adversarial/total
+             Mean of weighted norms of perturbations
+             STD of weighted norms of perturbations
+             Mean of norms of perturbations
+             STD of norms of perturbations
+
+    """
     extra_cols = ['orig_pred', 'adv_pred', 'iters']
-    df_test = config['TestData']
     feature_names = config['FeatureNames']
     weights = config['Weights']
     bounds = config['Bounds']
@@ -29,6 +42,7 @@ def gen_adv(model, config, method):
     n_samples = 0
     n_success = 0
     pert_norms = []
+    total_loop_change = 0
     weighted_pert_norms = []
     for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
         i += 1
@@ -44,6 +58,7 @@ def gen_adv(model, config, method):
         else:
             raise Exception("Invalid method", method)
 
+        total_loop_change += loop_i
         pert = x_adv - x_tensor.numpy()
 
         if orig_pred != adv_pred:
@@ -53,12 +68,22 @@ def gen_adv(model, config, method):
 
         results[i] = np.append(x_adv, orig_pred)
     df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
+    #print(f"Avarage loop change:{total_loop_change/n_samples}")
+    if n_success == 0:
+        return df, n_success/n_samples, 0, 0, 0, 0
     return df, n_success/n_samples, np.mean(weighted_pert_norms), np.std(weighted_pert_norms),\
                                     np.mean(pert_norms), np.std(pert_norms)
 
 
 # Clipping function
 def clip(current, low_bound, up_bound):
+    """
+    Clip the data to be within the natural bounds.
+    :param current: Current values of params
+    :param low_bound: Lower bound on each param
+    :param up_bound: Upper bound on each param
+    :return: List of clipped values
+    """
     assert(len(current) == len(up_bound) and len(low_bound) == len(up_bound))
     low_bound = torch.FloatTensor(low_bound)
     up_bound = torch.FloatTensor(up_bound)
@@ -154,13 +179,12 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
     best_pert_x = clip(best_pert_x, bounds[0], bounds[1])
     output = model.forward(best_pert_x)
     output_pred = output.max(0, keepdim=True)[1].cpu().numpy()
-
     return orig_pred, output_pred, best_pert_x.clone().detach().cpu().numpy(), loop_change_class
 
 # Forked from https://github.com/LTS4/DeepFool
 def deepfool(x_old, net, maxiters, alpha, bounds, weights=[], overshoot=0.002):
     """
-    :param image: tabular sample
+    :param x_old: tabular sample
     :param net: network 
     :param maxiters: maximum number of iterations ran to generate the adversarial examples
     :param alpha: scaling factor used to control the growth of the perturbation

@@ -17,7 +17,8 @@ def plot_metrics(pre_defense_data, post_defense_data, tag):
     row_headers = ['Before', 'After', 'After/Before']
     pre_defense_row = get_row(pre_defense_data)
     post_defense_row = get_row(post_defense_data)
-    scale = get_row(np.array(post_defense_data)/np.array(pre_defense_data))
+    with np.errstate(divide='ignore',invalid='ignore'):
+        scale = get_row(np.array(post_defense_data)/np.array(pre_defense_data))
     data = [pre_defense_row, post_defense_row, scale]
     rcolors = plt.cm.BuPu(np.full(len(row_headers), 0.1))
     ccolors = plt.cm.BuPu(np.full(len(column_headers), 0.1))
