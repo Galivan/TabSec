@@ -8,7 +8,8 @@ from tester import test_bce_model
 
 
 ft_settings = {'lr_ratio': 0.1,
-               'epochs_ratio': 1}
+               'epochs_ratio': 1,
+               'batch_size': 100}
 
 
 def fine_tune_model(model, device, adverse_data, settings):
@@ -22,7 +23,7 @@ def fine_tune_model(model, device, adverse_data, settings):
     :return: training loss and training accuracies of the fine-tuning process
     """
     ft_dataset = TabularDataset(adverse_data, settings['FeatureNames'], settings['Target'], True)
-    ft_dataloader = DataLoader(ft_dataset, batch_size=1, shuffle=True)
+    ft_dataloader = DataLoader(ft_dataset, batch_size=ft_settings['batch_size'], shuffle=True)
 
     ft_lr = ft_settings['lr_ratio'] * settings['lr']
     ft_epochs = ft_settings['epochs_ratio'] * settings['epochs']

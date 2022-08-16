@@ -30,7 +30,7 @@ def main():
                 'hidden_dim': 100,
                 'layers': 5,
                 'lr': 1e-4,
-                'MaxIters': 500,
+                'MaxIters': 2000,
                 'Alpha': 0.001,
                 'Lambda': 8.5
                 }
@@ -54,8 +54,8 @@ def main():
     plt.show()
 
     # Sub sample
-    settings['TrainAdv'] = settings['TrainData'].sample(n=200, random_state=SEED)
-    settings['TestAdv'] = settings['TestData'].sample(n=20, random_state=SEED)
+    settings['TrainAdv'] = settings['TrainData'].sample(n=50, random_state=SEED)
+    settings['TestAdv'] = settings['TestData'].sample(n=10, random_state=SEED)
 
     # Generate adversarial examples
     print("Generating adversarial examples for training...")
@@ -69,8 +69,6 @@ def main():
     lpf_test_data.extend(test_data)
     df_test_data.extend(test_data)
     settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
-
-    test_bouncer(device, settings['TestData'], df_adv_lpf_test, df_adv_lpf, settings)
 
     # Test fine-tuning method on LowProFool
     print("Testing fine tuning on LowProFool...")

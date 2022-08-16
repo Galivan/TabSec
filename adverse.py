@@ -21,11 +21,8 @@ def gen_adv(model, config, method, df_test):
     :param df_test: Data to make adversarial examples from
     :return: Dataframe of adversarial examples with original target
              Success rate of the method - adversarial/total
-             Mean of weighted norms of perturbations
-             STD of weighted norms of perturbations
-             Mean of norms of perturbations
-             STD of norms of perturbations
-
+             Norms of perturbations
+             Weighted norms of perturbations
     """
     extra_cols = ['orig_pred', 'adv_pred', 'iters']
     feature_names = config['FeatureNames']
@@ -71,8 +68,7 @@ def gen_adv(model, config, method, df_test):
     #print(f"Avarage loop change:{total_loop_change/n_samples}")
     if n_success == 0:
         return df, n_success/n_samples, 0, 0, 0, 0
-    return df, n_success/n_samples, np.mean(weighted_pert_norms), np.std(weighted_pert_norms),\
-                                    np.mean(pert_norms), np.std(pert_norms)
+    return df, n_success/n_samples, pert_norms, weighted_pert_norms
 
 
 # Clipping function
