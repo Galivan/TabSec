@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_metrics(pre_defense_data, post_defense_data, tag):
+def show_finetuning_metrics(pre_defense_data, post_defense_data, tag):
     """
     Show a table with metrics to compare our methods of defense.
     Data is: "Success Rate", "W. Norm Mean", "W. Norm STD", "Norm Mean", "Norm STD", "Test Loss", "Test Acc."
@@ -46,7 +46,7 @@ def plot_metrics(pre_defense_data, post_defense_data, tag):
     plt.show()
 
 
-
 def get_row(metrics):
     return np.array([f'{x:1.5f}' for x in metrics])
+
 
