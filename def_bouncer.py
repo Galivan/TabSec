@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import keras
 from torch.utils.data import DataLoader
@@ -16,15 +17,15 @@ bouncer_settings = {'lr': 1e-4,
 
 
 def get_trained_bouncer_model(device, true_data_df, adv_data_df, settings):
-    features, target = settings['FeatureNames'], settings['Target']
-    train_dataloader, dimensions = get_bouncer_dataloaders(true_data_df, adv_data_df, features, target)
+    features = np.append(settings['FeatureNames'], (settings['Target']))
+    train_dataloader, dimensions = get_bouncer_dataloaders(true_data_df, adv_data_df, features)
     model = Net(dimensions[0], settings['hidden_dim'], dimensions[1], settings['layers'])
     train_bce_adam_model(model, device, train_dataloader, bouncer_settings['lr'], bouncer_settings['epochs'])
     return model
 
 
-def get_bouncer_dataloaders(true_data_df, adv_data_df, features, target):
-    target="is_adv"
+def get_bouncer_dataloaders(true_data_df, adv_data_df, features):
+    target = "is_adv"
     true_data_df = true_data_df.assign(is_adv=0)
     adv_data_df = adv_data_df.assign(is_adv=1)
     training_df = pd.concat([true_data_df, adv_data_df])
@@ -36,7 +37,7 @@ def get_bouncer_dataloaders(true_data_df, adv_data_df, features, target):
 def test_bouncer(device, true_data_test_df, adv_data_test_df, adv_examples, settings):
     bouncer = get_trained_bouncer_model(device, settings['TrainData'], adv_examples, settings)
     target = "is_adv"
-    features = settings['FeatureNames']
+    features = np.append(settings['FeatureNames'], (settings['Target']))
 
     true_data_test_df = true_data_test_df.assign(is_adv=0)
     adv_data_test_df = adv_data_test_df.assign(is_adv=1)
