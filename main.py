@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 import defense
 import metrics
 import tester
+from def_bouncer import test_bouncer
 from model import Net
 from tabular_dataset import TabularDataset
 from trainer import Trainer, train_bce_adam_model
@@ -33,7 +34,7 @@ def main():
                 'Alpha': 0.001,
                 'Lambda': 8.5
                 }
-
+    torch.manual_seed(SEED)
     plt.figure(figsize=(15, 10))
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -53,14 +54,16 @@ def main():
     plt.show()
 
     # Sub sample
-    settings['TrainAdv'] = settings['TrainData'].sample(n=10, random_state=SEED)
-    settings['TestAdv'] = settings['TestData'].sample(n=5, random_state=SEED)
+    settings['TrainAdv'] = settings['TrainData'].sample(n=50, random_state=SEED)
+    settings['TestAdv'] = settings['TestData'].sample(n=10, random_state=SEED)
 
     # Generate adversarial examples
+    print("Generating adversarial examples for training...")
     df_adv_lpf, *lpf_train_data = gen_adv(nn_model, settings, 'LowProFool', settings['TrainAdv'])
-    _, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool', settings['TestAdv'])
-
     df_adv_df, *df_train_data = gen_adv(nn_model, settings, 'Deepfool', settings['TrainAdv'])
+
+    print("Generating adversarial examples for testing...")
+    df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool', settings['TestAdv'])
     _, *df_test_data = gen_adv(nn_model, settings, 'Deepfool', settings['TestAdv'])
 
     lpf_test_data.extend(test_data)
@@ -68,12 +71,16 @@ def main():
     settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
 
     # Test fine-tuning method on LowProFool
+    print("Testing fine tuning on LowProFool...")
     ft_lpf_model_clone = copy.deepcopy(nn_model)
     defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_test_data, settings)
 
-    # Test fine-tuning method on LowProFool
+    # Test fine-tuning method on Deep Fool
+    print("Testing fine tuning on Depp Fool...")
     ft_df_model_clone = copy.deepcopy(nn_model)
     defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_test_data, settings)
+
+
 
 
 if __name__ == "__main__":

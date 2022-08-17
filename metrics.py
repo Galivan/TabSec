@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_metrics(pre_defense_data, post_defense_data, tag):
+def show_finetuning_metrics(pre_defense_data, post_defense_data, tag):
     """
     Show a table with metrics to compare our methods of defense.
-    Data is: "Success Rate", "W. Norm Mean", "W. Norm STD", "Norm Mean", "Norm STD", "Test Loss", "Test Acc."
+    Data is: "Success Rate", "Perturbation Norms, "Perturbation W. Norms", "Test Loss", "Test Acc."
     :param pre_defense_data: Data before applying defense methods.
     :param post_defense_data: Data after applying defense methods.
     :param tag: T
@@ -13,12 +13,12 @@ def plot_metrics(pre_defense_data, post_defense_data, tag):
     """
     fig_background_color = 'white'
     fig_border = 'steelblue'
-    column_headers = ["Success Rate", "W. Norm Mean", "W. Norm STD", "Norm Mean", "Norm STD", "Test Loss", "Test Acc."]
+    column_headers = ["Success Rate", "Norm Mean", "Norm STD", "W. Norm Mean", "W. Norm STD", "Test Loss", "Test Acc."]
     row_headers = ['Before', 'After', 'After/Before']
     pre_defense_row = get_row(pre_defense_data)
     post_defense_row = get_row(post_defense_data)
     with np.errstate(divide='ignore',invalid='ignore'):
-        scale = get_row(np.array(post_defense_data)/np.array(pre_defense_data))
+        scale = (post_defense_row/pre_defense_row).round(5)
     data = [pre_defense_row, post_defense_row, scale]
     rcolors = plt.cm.BuPu(np.full(len(row_headers), 0.1))
     ccolors = plt.cm.BuPu(np.full(len(column_headers), 0.1))
@@ -46,7 +46,15 @@ def plot_metrics(pre_defense_data, post_defense_data, tag):
     plt.show()
 
 
-
 def get_row(metrics):
-    return np.array([f'{x:1.5f}' for x in metrics])
+    sr = metrics[0]
+    mean = np.mean(metrics[1])
+    std = np.std(metrics[1])
+    w_mean = np.mean(metrics[2])
+    w_std = np.std(metrics[2])
+    test_loss = metrics[-2]
+    test_acc = metrics[-1]
+    row = [sr, mean, std, w_mean, w_std, test_loss, test_acc]
+    return np.array([f'{x:1.5f}' for x in row], dtype=float)
+
 

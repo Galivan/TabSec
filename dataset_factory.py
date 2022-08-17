@@ -40,16 +40,14 @@ def get_train_test_dataset(settings, dataset_name, test_size=None, train_size=No
     settings['Weights'] = weights
     settings['Bounds'] = bounds
 
-    train_dataset = TabularDataset(train_df,features, target, True, transform, target_transform)
-    test_dataset = TabularDataset(test_df,features, target, False, transform, target_transform)
+    train_dataset = TabularDataset(train_df, features, target, True, transform, target_transform)
+    test_dataset = TabularDataset(test_df, features, target, False, transform, target_transform)
     return train_dataset, test_dataset
 
 
 def get_credit_g_dataloaders(settings):
     credit_g = 'credit-g'
     credit_g_train, credit_g_test = get_train_test_dataset(settings, credit_g, test_size=300)
-
-
     train_dataloader = DataLoader(credit_g_train, batch_size=settings['batch_size'], shuffle=True)
     test_dataloader = DataLoader(credit_g_test, batch_size=len(credit_g_test))
     d_in, d_out = credit_g_train.get_dimensions()
