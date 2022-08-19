@@ -67,7 +67,7 @@ def gen_adv(model, config, method, df_test):
     df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
     #print(f"Avarage loop change:{total_loop_change/n_samples}")
     if n_success == 0:
-        return df, n_success/n_samples, 0, 0, 0, 0
+        return df, n_success/n_samples, 0, 0
     return df, n_success/n_samples, pert_norms, weighted_pert_norms
 
 

@@ -26,7 +26,7 @@ def fine_tune_model(model, device, adverse_data, settings):
     ft_dataloader = DataLoader(ft_dataset, batch_size=ft_settings['batch_size'], shuffle=True)
 
     ft_lr = ft_settings['lr_ratio'] * settings['lr']
-    ft_epochs = ft_settings['epochs_ratio'] * settings['epochs']
+    ft_epochs = int(ft_settings['epochs_ratio'] * settings['epochs'])
 
     return train_bce_adam_model(model, device, ft_dataloader, ft_lr, ft_epochs)
 

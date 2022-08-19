@@ -8,11 +8,7 @@ from tabular_dataset import TabularDataset
 from trainer import train_bce_adam_model
 from tester import test_bce_model
 from def_finetune import test_fine_tuning
-
-ft_settings = {'lr_ratio': 0.1,
-               'epochs_ratio': 1}
-
-
+from def_svm_dicriminator import SVMDiscriminator
 
 
 def test_fine_tune_low_pro_fool(nn_model, device, test_dataloader, adv_examples, adv_data_before, settings):
@@ -28,6 +24,7 @@ def test_fine_tune_low_pro_fool(nn_model, device, test_dataloader, adv_examples,
     """
     test_fine_tuning(nn_model, device, test_dataloader, adv_examples, adv_data_before, "LowProFool", settings)
 
+
 def test_fine_tune_deep_fool(nn_model, device, test_dataloader, adv_examples, adv_data_before, settings):
     """
     Test fine tune method of DeepFool
@@ -40,3 +37,14 @@ def test_fine_tune_deep_fool(nn_model, device, test_dataloader, adv_examples, ad
     :return: None
     """
     test_fine_tuning(nn_model, device, test_dataloader, adv_examples, adv_data_before, "Deepfool", settings)
+
+
+def test_svm_discriminator(settings, model, adv_method, train_df, real_test_df, adv_test_df,
+                           is_weighted=True, c=1.0, kernel='rbf', degree=3, gamma='scale'):
+    svm_discriminator = SVMDiscriminator(settings, model, adv_method, is_weighted, c, kernel, degree, gamma)
+    svm_discriminator.train(train_df)
+    sr = svm_discriminator.test(real_test_df, adv_test_df)
+    print(f'SVM success rate is: {sr}')
+
+
+
