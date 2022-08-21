@@ -32,8 +32,8 @@ class Trainer:
         :return: None
         """
         for epoch in range(num_epochs):
-            if (epoch + 1) % 100 == 0:
-                print(f'Epoch [{epoch + 1}/{num_epochs}]...')
+            #if (epoch + 1) % 100 == 0:
+                #print(f'Epoch [{epoch + 1}/{num_epochs}]...')
             n_correct = 0
             total_loss = 0
             for i, (data, labels) in enumerate(train_loader):

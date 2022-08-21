@@ -45,7 +45,7 @@ class SVMDiscriminator:
         """
         Test the accuracy of SVM (Sort of validation test)
         :param test_loader: pytorch DataLoader for test data. Contains real and adv. examples.
-        :return: Success rate of the SVM.
+        :return: Success rate of the SVM on real data, and on adv data.
         """
 
         real_predicts = self.predict(true_data_df) # Should be all 0.
@@ -56,8 +56,6 @@ class SVMDiscriminator:
         n_real = len(real_predicts)
         n_adv = len(adv_predicts)
 
-        print(f' Success on real data: {n_correct_real/n_real:1.5f}')
-        print(f' Success on adv data: {n_correct_adv/n_adv:1.5f}')
-        return (n_correct_real + n_correct_adv)/(n_real + n_adv)
+        return (n_correct_real/n_real), (n_correct_adv/n_adv)
 
 

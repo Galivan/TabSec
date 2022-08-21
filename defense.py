@@ -43,8 +43,8 @@ def test_svm_discriminator(settings, model, adv_method, train_df, real_test_df, 
                            is_weighted=True, c=1.0, kernel='rbf', degree=3, gamma='scale'):
     svm_discriminator = SVMDiscriminator(settings, model, adv_method, is_weighted, c, kernel, degree, gamma)
     svm_discriminator.train(train_df)
-    sr = svm_discriminator.test(real_test_df, adv_test_df)
-    print(f'SVM success rate is: {sr}')
+    return svm_discriminator.test(real_test_df, adv_test_df)
+
 
 
 

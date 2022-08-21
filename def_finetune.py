@@ -48,4 +48,4 @@ def test_fine_tuning(model, device, test_dataloader, adv_examples, adv_data_befo
 
     df_adv_lpf, *lpf_data_after_ft = gen_adv(model, settings, adv_name, settings['TestAdv'])
     lpf_data_after_ft.extend(test_data_after_ft)
-    metrics.show_finetuning_metrics(adv_data_before, lpf_data_after_ft, f"{adv_name} - Fine Tuning")
+    metrics.show_finetuning_metrics(adv_data_before, lpf_data_after_ft, settings['test_string'])

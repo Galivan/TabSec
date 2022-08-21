@@ -1,4 +1,5 @@
 # Misc
+import numpy
 import numpy as np
 import pandas as pd
 
@@ -62,12 +63,13 @@ def gen_adv(model, config, method, df_test):
             n_success += 1
             pert_norms.append(np.linalg.norm(pert))
             weighted_pert_norms.append(np.linalg.norm(weights * pert))
+        else:
+            pert_norms.append(999999)
+            weighted_pert_norms.append(999999)
 
         results[i] = np.append(x_adv, orig_pred)
     df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
     #print(f"Avarage loop change:{total_loop_change/n_samples}")
-    if n_success == 0:
-        return df, n_success/n_samples, 0, 0
     return df, n_success/n_samples, pert_norms, weighted_pert_norms
 
 

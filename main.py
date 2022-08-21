@@ -26,7 +26,7 @@ SEED = 0
 def main():
     # + configurations for adversarial generation
     settings = {'batch_size': 100,
-                'epochs': 500,
+                'epochs': 400,
                 'hidden_dim': 100,
                 'layers': 5,
                 'lr': 1e-4,
@@ -54,31 +54,38 @@ def main():
     plt.show()
 
     # Sub sample
-    settings['TrainAdv'] = settings['TrainData'].sample(n=50, random_state=SEED)
-    settings['TestAdv'] = settings['TestData'].sample(n=10, random_state=SEED)
+    settings['TrainAdv'] = settings['TrainData'].sample(n=100, random_state=SEED)
+    settings['TestAdv'] = settings['TestData'].sample(n=50, random_state=SEED)
+
 
     # Generate adversarial examples
     print("Generating adversarial examples for training...")
     df_adv_lpf, *lpf_train_data = gen_adv(nn_model, settings, 'LowProFool', settings['TrainAdv'])
-    df_adv_df, *df_train_data = gen_adv(nn_model, settings, 'Deepfool', settings['TrainAdv'])
+    #df_adv_df, *df_train_data = gen_adv(nn_model, settings, 'Deepfool', settings['TrainAdv'])
 
     print("Generating adversarial examples for testing...")
     df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool', settings['TestAdv'])
-    _, *df_test_data = gen_adv(nn_model, settings, 'Deepfool', settings['TestAdv'])
+    #df_adv_df_test, *df_test_data = gen_adv(nn_model, settings, 'Deepfool', settings['TestAdv'])
+
+    defense.test_svm_discriminator(settings, nn_model, 'LowProFool', settings['TrainAdv'], settings['TestAdv'], df_adv_lpf_test)
+
 
     lpf_test_data.extend(test_data)
-    df_test_data.extend(test_data)
-    settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
+    #df_test_data.extend(test_data)
+    #settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
 
     # Test fine-tuning method on LowProFool
     print("Testing fine tuning on LowProFool...")
     ft_lpf_model_clone = copy.deepcopy(nn_model)
     defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_test_data, settings)
+    defense.test_svm_discriminator(settings, ft_lpf_model_clone, 'LowProFool', settings['TrainAdv'], settings['TestAdv'], df_adv_lpf_test)
 
-    # Test fine-tuning method on Deep Fool
-    print("Testing fine tuning on Depp Fool...")
-    ft_df_model_clone = copy.deepcopy(nn_model)
-    defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_test_data, settings)
+
+# Test fine-tuning method on Deep Fool
+    print("Testing fine tuning on Deep Fool...")
+    #ft_df_model_clone = copy.deepcopy(nn_model)
+    #defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_test_data, settings)
+    #defense.test_svm_discriminator(settings, ft_df_model_clone, 'Deepfool', settings['TrainAdv'], settings['TestAdv'], df_adv_df_test)
 
 
 
