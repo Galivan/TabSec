@@ -18,8 +18,8 @@ class SVMDiscriminator:
         self.is_weighted = is_weighted
 
     def train(self, samples_df):
-        df, s_rate, pert_norms, w_pert_norms = gen_adv(self.model, self.settings, self.adv_method, samples_df)
-        df, s_rate, pert_norms_2, w_pert_norms_2 = gen_adv(self.model, self.settings, self.adv_method, df)
+        orig_examples, df, s_rate, pert_norms, w_pert_norms = gen_adv(self.model, self.settings, self.adv_method, samples_df, n=10)
+        orig_examples, df, s_rate, pert_norms_2, w_pert_norms_2 = gen_adv(self.model, self.settings, self.adv_method, df)
         if self.is_weighted:
             norm_samples = np.concatenate((w_pert_norms, w_pert_norms_2))
         else:
@@ -34,12 +34,20 @@ class SVMDiscriminator:
         :param sample: A single tabular entry
         :return: Prediction is the sample adversarial or not
         """
-        df, s_rate, pert_norms, w_pert_norms = gen_adv(self.model, self.settings, self.adv_method, sample)
+        orig_examples, df, s_rate, pert_norms, w_pert_norms = gen_adv(self.model, self.settings, self.adv_method, sample)
         if self.is_weighted:
             norm_samples = w_pert_norms
         else:
             norm_samples = pert_norms
+        if df.empty:
+            return np.array([0]).reshape(-1, 1)
         return self.clf.predict(np.array(norm_samples).reshape(-1, 1))
+
+    def predict_multilpe(self, samples):
+        results = []
+        for _, row in samples.iterrows():
+            results.append(self.predict(pd.DataFrame(row).transpose()))
+        return np.array(results).reshape(-1, 1)
 
     def test(self, true_data_df, adv_data_df):
         """
@@ -48,8 +56,8 @@ class SVMDiscriminator:
         :return: Success rate of the SVM on real data, and on adv data.
         """
 
-        real_predicts = self.predict(true_data_df) # Should be all 0.
-        adv_predicts = self.predict(adv_data_df) # Should be all 1.
+        real_predicts = self.predict_multilpe(true_data_df) # Should be all 0.
+        adv_predicts = self.predict_multilpe(adv_data_df) # Should be all 1.
 
         n_correct_real = np.count_nonzero(real_predicts == 0)
         n_correct_adv = np.count_nonzero(adv_predicts == 1)

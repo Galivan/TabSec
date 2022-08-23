@@ -43,6 +43,7 @@ def show_finetuning_metrics(pre_defense_data, post_defense_data, tag):
     plt.suptitle(tag, y=0.8)
     the_table.auto_set_font_size(False)
     the_table.set_fontsize(10)
+    plt.show()
 
 
 def get_row(metrics):
