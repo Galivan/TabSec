@@ -34,7 +34,7 @@ def main():
                 'Alpha': 0.001,
                 'Lambda': 8.5,
                 'scale_max': 10,
-                'n_train_adv': 50
+                'n_train_adv': 100
                 }
     test_string = "epochs={0}, lr={1}, scale_max={2}, alpha={3},\n" \
                   " lambda={4}, max_iters={5}".format(settings['epochs'], settings['lr'], settings['scale_max'],
@@ -50,6 +50,7 @@ def main():
 
     train_losses, train_accuracies = train_bce_adam_model(nn_model, device, train_dataloader, settings['lr'], settings['epochs'])
     test_data = tester.test_bce_model(nn_model, device, test_dataloader)
+    print(test_data)
 
     fig, axs = plt.subplots(2, 1)
     x = np.arange(settings['epochs'])
@@ -61,16 +62,18 @@ def main():
 
     # Generate adversarial examples
     print("Generating adversarial examples for training...")
-    orig_examples, df_adv_lpf, *lpf_train_data = gen_adv(nn_model, settings, 'LowProFool',
-                                                         settings['TrainData'], n=settings['n_train_adv'])
+    # orig_examples, df_adv_lpf, *lpf_train_data = gen_adv(nn_model, settings, 'LowProFool',
+    #                                                      settings['TrainData'], n=settings['n_train_adv'])
     #df_adv_df, *df_train_data = gen_adv(nn_model, settings, 'Deepfool', settings['TrainAdv'])
 
     print("Generating adversarial examples for testing...")
-    orig_examples, df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool',
-                                                             settings['TestData'], n=settings['n_train_adv']*0.5)
+    orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool',
+                                                             settings['TestData'], n=settings['n_train_adv'])
     #df_adv_df_test, *df_test_data = gen_adv(nn_model, settings, 'Deepfool', settings['TestAdv'])
 
-    real_sr, adv_sr = defense.test_svm_discriminator(settings, nn_model, 'LowProFool', settings['TestData'], orig_examples, df_adv_lpf_test)
+    # real_sr, adv_sr = defense.test_svm_discriminator(settings, nn_model, 'LowProFool', settings['TrainData'], orig_examples, df_adv_lpf_test)
+    defense.test_svm_model(settings, device, nn_model, "LowProFool", settings['TrainData'],
+                           df_adv_lpf_test, orig_examples_lpf_test)
 
 
     lpf_test_data.extend(test_data)
@@ -80,10 +83,9 @@ def main():
     # Test fine-tuning method on LowProFool
     print("Testing fine tuning on LowProFool...")
     ft_lpf_model_clone = copy.deepcopy(nn_model)
-    defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf, lpf_test_data, settings)
-    real_sr_ft, adv_sr_ft = defense.test_svm_discriminator(settings, ft_lpf_model_clone, 'LowProFool', settings['TrainData'], orig_examples, df_adv_lpf_test)
+    defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf_test, lpf_test_data, settings)
+    real_sr_ft, adv_sr_ft = defense.test_svm_discriminator(settings, ft_lpf_model_clone, 'LowProFool', settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
 
-    print(f"Success rate before FT: real data - {real_sr}, adv data - {adv_sr}")
     print(f"Success rate after FT: real data - {real_sr_ft}, adv data - {adv_sr_ft}")
 # Test fine-tuning method on Deep Fool
     print("Testing fine tuning on Deep Fool...")
