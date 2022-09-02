@@ -1,5 +1,6 @@
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+import numpy as np
 
 import fetch_data
 
@@ -25,7 +26,8 @@ def get_train_test_dataset(settings, dataset_name, test_size=None, train_size=No
     bounds = get_bounds(dataframe)
 
     # Normalize the data
-    scaler, dataframe, bounds = normalize(dataframe, target, features, bounds)
+    scaler, dataframe, bounds = normalize(dataframe, target, features, bounds, settings['scale_max'])
+
 
     # Compute the weights modelizing the expert's knowledge
     weights = get_weights(dataframe, target)

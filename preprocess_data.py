@@ -9,14 +9,14 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
 
-def normalize(df, target, feature_names, bounds):
+def normalize(df, target, feature_names, bounds, scale_max):
     df_return = df.copy()
     
     # Makes sure target does not need scaling
     targets = np.unique(df[target].values)
     assert(len(targets == 2) and 0. in targets and 1. in targets)
     
-    scaler = MinMaxScaler()
+    scaler = MinMaxScaler((0, scale_max))
     X = df_return[feature_names]
     scaler.fit(X)    
     df_return[feature_names] = scaler.transform(X)

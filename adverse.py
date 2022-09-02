@@ -1,4 +1,5 @@
 # Misc
+import numpy
 import numpy as np
 import pandas as pd
 
@@ -12,13 +13,14 @@ from tqdm import tqdm
 from tqdm import tqdm_notebook
 
 
-def gen_adv(model, config, method, df_test):
+def gen_adv(model, config, method, df_test, n=-1):
     """
     Generate adversarial examples from given data, using a specific method
     :param model: NN Model we want to fool
     :param config: General configuration
     :param method: Adversarial method name
     :param df_test: Data to make adversarial examples from
+    :param n: number of examples to generate
     :return: Dataframe of adversarial examples with original target
              Success rate of the method - adversarial/total
              Norms of perturbations
@@ -33,7 +35,8 @@ def gen_adv(model, config, method, df_test):
     lambda_ = config['Lambda']
     target = config['Target']
     
-    results = np.zeros((len(df_test), len(feature_names) + 1))
+    results = []
+    benigns = []
             
     i = -1
     n_samples = 0
@@ -48,7 +51,7 @@ def gen_adv(model, config, method, df_test):
         
         if method == 'LowProFool':
             orig_pred, adv_pred, x_adv, loop_i = lowProFool(x_tensor, model, weights, bounds,
-                                                             maxiters, alpha, lambda_)
+                                                            maxiters, alpha, lambda_)
         elif method == 'Deepfool':
             orig_pred, adv_pred, x_adv, loop_i = deepfool(x_tensor, model, maxiters, alpha,
                                                           bounds, weights=[])
@@ -62,13 +65,16 @@ def gen_adv(model, config, method, df_test):
             n_success += 1
             pert_norms.append(np.linalg.norm(pert))
             weighted_pert_norms.append(np.linalg.norm(weights * pert))
+            results.append(np.append(x_adv, orig_pred))
+            benigns.append(row)
+        if n_success == n:
+            break
 
-        results[i] = np.append(x_adv, orig_pred)
-    df = pd.DataFrame(results, index=df_test.index, columns=feature_names + [target])
-    #print(f"Avarage loop change:{total_loop_change/n_samples}")
-    if n_success == 0:
-        return df, n_success/n_samples, 0, 0, 0, 0
-    return df, n_success/n_samples, pert_norms, weighted_pert_norms
+    df = pd.DataFrame(results, columns=feature_names + [target])
+    bening_df = pd.DataFrame(benigns, columns=feature_names + [target])
+    return bening_df, df, n_success/n_samples, pert_norms, weighted_pert_norms
+
+
 
 
 # Clipping function

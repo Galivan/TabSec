@@ -10,11 +10,13 @@ from sklearn.datasets import fetch_openml
 from credit_g import nominal_to_numeric
 
 def get_df(dataset):
+    pd.options.mode.chained_assignment = None  # default='warn'
+
     assert(dataset == 'credit-g')
     
-    dataset = fetch_openml(dataset)
+    dataset = fetch_openml(dataset, version=1)
     target = 'target'
-    print(len(dataset['data'].columns))
+    #print(len(dataset['data'].columns))
 
     # converts nominal features to numeric
     dataset['data'] = nominal_to_numeric(dataset['data'])

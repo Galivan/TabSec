@@ -1,3 +1,4 @@
+import numpy as np
 from torch.utils.data import DataLoader
 
 import metrics
@@ -26,7 +27,7 @@ def fine_tune_model(model, device, adverse_data, settings):
     ft_dataloader = DataLoader(ft_dataset, batch_size=ft_settings['batch_size'], shuffle=True)
 
     ft_lr = ft_settings['lr_ratio'] * settings['lr']
-    ft_epochs = ft_settings['epochs_ratio'] * settings['epochs']
+    ft_epochs = int(ft_settings['epochs_ratio'] * settings['epochs'])
 
     return train_bce_adam_model(model, device, ft_dataloader, ft_lr, ft_epochs)
 
@@ -46,6 +47,10 @@ def test_fine_tuning(model, device, test_dataloader, adv_examples, adv_data_befo
     fine_tune_model(model, device, adv_examples, settings)
     test_data_after_ft = test_bce_model(model, device, test_dataloader)
 
-    df_adv_lpf, *lpf_data_after_ft = gen_adv(model, settings, adv_name, settings['TestAdv'])
+    orig_examples, df_adv_lpf, *lpf_data_after_ft = gen_adv(model, settings, adv_name,
+                                                            settings['TestData'], n=0.5*settings['n_train_adv'])
     lpf_data_after_ft.extend(test_data_after_ft)
-    metrics.show_finetuning_metrics(adv_data_before, lpf_data_after_ft, f"{adv_name} - Fine Tuning")
+    mean_data_before = np.vectorize(np.mean)(np.array(adv_data_before, dtype=object))
+    mean_data_after = np.vectorize(np.mean)(np.array(lpf_data_after_ft, dtype=object))
+    metrics.show_finetuning_metrics(adv_data_before, lpf_data_after_ft, settings['test_string'])
+    return mean_data_after - mean_data_before
