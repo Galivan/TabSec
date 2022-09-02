@@ -40,7 +40,7 @@ class SVMDiscriminator:
         else:
             norm_samples = pert_norms
         if df.empty:
-            return np.array([0]).reshape(-1, 1)
+            return np.array([0])
         return self.clf.predict(np.array(norm_samples).reshape(-1, 1))
 
     def predict_multilpe(self, samples):

@@ -45,55 +45,8 @@ def main():
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_dataloader, test_dataloader, dimensions = dataset_factory.get_credit_g_dataloaders(settings)
-    nn_model = Net(dimensions[0], settings['hidden_dim'], dimensions[1], settings['layers'])
-    settings["Model"] = nn_model
 
-    train_losses, train_accuracies = train_bce_adam_model(nn_model, device, train_dataloader, settings['lr'], settings['epochs'])
-    test_data = tester.test_bce_model(nn_model, device, test_dataloader)
-    print(test_data)
-
-    fig, axs = plt.subplots(2, 1)
-    x = np.arange(settings['epochs'])
-    axs[0].plot(x, train_losses, label="train_losses")
-    axs[0].set_title("train_losses")
-    axs[1].plot(x, train_accuracies, label="train_accuracies")
-    axs[1].set_title("train_accuracies")
-    plt.show()
-
-    # Generate adversarial examples
-    print("Generating adversarial examples for training...")
-    # orig_examples, df_adv_lpf, *lpf_train_data = gen_adv(nn_model, settings, 'LowProFool',
-    #                                                      settings['TrainData'], n=settings['n_train_adv'])
-    #df_adv_df, *df_train_data = gen_adv(nn_model, settings, 'Deepfool', settings['TrainAdv'])
-
-    print("Generating adversarial examples for testing...")
-    orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool',
-                                                             settings['TestData'], n=settings['n_train_adv'])
-    #df_adv_df_test, *df_test_data = gen_adv(nn_model, settings, 'Deepfool', settings['TestAdv'])
-
-    # real_sr, adv_sr = defense.test_svm_discriminator(settings, nn_model, 'LowProFool', settings['TrainData'], orig_examples, df_adv_lpf_test)
-    defense.test_svm_model(settings, device, nn_model, "LowProFool", settings['TrainData'],
-                           df_adv_lpf_test, orig_examples_lpf_test)
-
-
-    lpf_test_data.extend(test_data)
-    #df_test_data.extend(test_data)
-    #settings['AdvData'] = {'LowProFool': df_adv_lpf, 'Deepfool': df_adv_df}
-
-    # Test fine-tuning method on LowProFool
-    print("Testing fine tuning on LowProFool...")
-    ft_lpf_model_clone = copy.deepcopy(nn_model)
-    defense.test_fine_tune_low_pro_fool(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf_test, lpf_test_data, settings)
-    real_sr_ft, adv_sr_ft = defense.test_svm_discriminator(settings, ft_lpf_model_clone, 'LowProFool', settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
-
-    print(f"Success rate after FT: real data - {real_sr_ft}, adv data - {adv_sr_ft}")
-# Test fine-tuning method on Deep Fool
-    print("Testing fine tuning on Deep Fool...")
-    #ft_df_model_clone = copy.deepcopy(nn_model)
-    #defense.test_fine_tune_deep_fool(ft_df_model_clone, device, test_dataloader, df_adv_df, df_test_data, settings)
-    #defense.test_svm_discriminator(settings, ft_df_model_clone, 'Deepfool', settings['TrainAdv'], settings['TestAdv'], df_adv_df_test)
-
-
+    defense.test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, 'LowProFool')
 
 
 if __name__ == "__main__":

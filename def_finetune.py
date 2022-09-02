@@ -50,7 +50,7 @@ def test_fine_tuning(model, device, test_dataloader, adv_examples, adv_data_befo
     orig_examples, df_adv_lpf, *lpf_data_after_ft = gen_adv(model, settings, adv_name,
                                                             settings['TestData'], n=0.5*settings['n_train_adv'])
     lpf_data_after_ft.extend(test_data_after_ft)
-    mean_data_before = np.vectorize(np.mean)(adv_data_before)
-    mean_data_after = np.vectorize(np.mean)(lpf_data_after_ft)
+    mean_data_before = np.vectorize(np.mean)(np.array(adv_data_before, dtype=object))
+    mean_data_after = np.vectorize(np.mean)(np.array(lpf_data_after_ft, dtype=object))
     metrics.show_finetuning_metrics(adv_data_before, lpf_data_after_ft, settings['test_string'])
     return mean_data_after - mean_data_before
