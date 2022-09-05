@@ -85,8 +85,13 @@ def test_svm_model(settings, device, model, adv_method, train_df, adv_df, benign
 def test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, method):
     # + configurations for adversarial generation
     test_string = "epochs={0}, lr={1}, scale_max={2}, alpha={3},\n" \
-                  " lambda={4}, max_iters={5}".format(settings['epochs'], settings['lr'], settings['scale_max'],
-                                                      settings['Alpha'], settings['Lambda'], settings['MaxIters'])
+                  " lambda={4}, max_iters={5}, method={6}".format(settings['epochs'],
+                                                                  settings['lr'],
+                                                                  settings['scale_max'],
+                                                                  settings['Alpha'],
+                                                                  settings['Lambda'],
+                                                                  settings['MaxIters'],
+                                                                  method)
     settings['test_string'] = test_string
     plt.figure(figsize=(15, 10))
 
@@ -95,6 +100,7 @@ def test_normal_model(settings, device, train_dataloader, test_dataloader, dimen
 
     train_losses, train_accuracies = train_bce_adam_model(nn_model, device, train_dataloader, settings['lr'], settings['epochs'])
     test_data = tester.test_bce_model(nn_model, device, test_dataloader)
+    print(test_data)
 
     fig, axs = plt.subplots(2, 1)
     x = np.arange(settings['epochs'])
@@ -110,22 +116,24 @@ def test_normal_model(settings, device, train_dataloader, test_dataloader, dimen
                                                           settings['TrainData'], n=settings['n_train_adv'])
 
     print("Generating adversarial examples for testing...")
-    orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, 'LowProFool',
+    orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, method,
                                                                       settings['TestData'], n=settings['n_train_adv'])
-
+    is_weighted = True if method == 'LowProFool' else False
+    print("Testing SVM Accuracy")
     real_sr, adv_sr = test_svm_discriminator(settings, nn_model, method,
-                                             settings['TrainData'], orig_examples, df_adv_lpf_test)
-    test_svm_model(settings, device, nn_model, "LowProFool", settings['TrainData'],
+                                             settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test, is_weighted)
+
+    print(f"Real SR = {real_sr}, adv SR = {adv_sr}")
+    test_svm_model(settings, device, nn_model, method, settings['TrainData'],
                            df_adv_lpf_test, orig_examples_lpf_test)
 
     lpf_test_data.extend(test_data)
     settings['AdvData'] = {method: df_adv_lpf}
 
-    # Test fine-tuning method on LowProFool
-    print("Testing fine tuning on LowProFool...")
+    print(f"Testing fine tuning on {method}...")
     ft_lpf_model_clone = copy.deepcopy(nn_model)
     test_fine_tuning(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf_test, lpf_test_data,method, settings)
-    real_sr_ft, adv_sr_ft = test_svm_discriminator(settings, ft_lpf_model_clone, 'LowProFool', settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
+    real_sr_ft, adv_sr_ft = test_svm_discriminator(settings, ft_lpf_model_clone, method, settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
 
     print(f"Success rate after FT: real data - {real_sr_ft}, adv data - {adv_sr_ft}")
 

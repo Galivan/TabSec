@@ -19,7 +19,9 @@ class SVMDiscriminator:
 
     def train(self, samples_df):
         orig_examples, df, s_rate, pert_norms, w_pert_norms = gen_adv(self.model, self.settings, self.adv_method, samples_df, n=10)
+        assert not df.empty
         orig_examples, df, s_rate, pert_norms_2, w_pert_norms_2 = gen_adv(self.model, self.settings, self.adv_method, df)
+        assert not df.empty
         if self.is_weighted:
             norm_samples = np.concatenate((w_pert_norms, w_pert_norms_2))
         else:

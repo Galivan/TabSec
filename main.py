@@ -21,6 +21,8 @@ from adverse import gen_adv
 from IPython.display import display
 
 SEED = 0
+lowProFool = 'LowProFool'
+deepfool = 'Deepfool'
 
 
 def main():
@@ -36,16 +38,15 @@ def main():
                 'scale_max': 10,
                 'n_train_adv': 100
                 }
-    test_string = "epochs={0}, lr={1}, scale_max={2}, alpha={3},\n" \
-                  " lambda={4}, max_iters={5}".format(settings['epochs'], settings['lr'], settings['scale_max'],
-                                                      settings['Alpha'], settings['Lambda'], settings['MaxIters'])
-    settings['test_string'] = test_string
     torch.manual_seed(SEED)
     plt.figure(figsize=(15, 10))
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_dataloader, test_dataloader, dimensions = dataset_factory.get_credit_g_dataloaders(settings)
-    defense.test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, 'LowProFool')
+
+    defense.test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, lowProFool)
+    defense.test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, deepfool)
+
 
 
 if __name__ == "__main__":
