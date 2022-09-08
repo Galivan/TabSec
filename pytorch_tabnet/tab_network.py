@@ -2,6 +2,7 @@ import torch
 from torch.nn import Linear, BatchNorm1d, ReLU
 import numpy as np
 from pytorch_tabnet import sparsemax
+from pytorch_tabnet.my_embed import EmbeddingMul
 
 
 def initialize_non_glu(module, input_dim, output_dim):
@@ -582,8 +583,9 @@ class TabNet(torch.nn.Module):
         )
 
     def forward(self, x):
-        x = self.embedder(x)
-        return self.tabnet(x)
+        b = self.embedder(x)
+        c = self.tabnet(b)
+        return c
 
     def forward_masks(self, x):
         x = self.embedder(x)
@@ -834,7 +836,7 @@ class EmbeddingGenerator(torch.nn.Module):
         self.cat_emb_dims = [self.cat_emb_dims[i] for i in sorted_idxs]
 
         for cat_dim, emb_dim in zip(cat_dims, self.cat_emb_dims):
-            self.embeddings.append(torch.nn.Embedding(cat_dim, emb_dim))
+            self.embeddings.append(EmbeddingMul(cat_dim, emb_dim))
 
         # record continuous indices
         self.continuous_idx = torch.ones(input_dim, dtype=torch.bool)
@@ -858,9 +860,9 @@ class EmbeddingGenerator(torch.nn.Module):
                 cols.append(x[:, feat_init_idx].float().view(-1, 1))
             else:
                 cols.append(
-                    self.embeddings[cat_feat_counter](x[:, feat_init_idx].long())
+                    self.embeddings[cat_feat_counter](x[:, feat_init_idx])
                 )
-                cat_feat_counter += 1
+            cat_feat_counter += 1
         # concat
         post_embeddings = torch.cat(cols, dim=1)
         return post_embeddings

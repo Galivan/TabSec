@@ -44,7 +44,7 @@ def main():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_dataloader, test_dataloader, dimensions = dataset_factory.get_credit_g_dataloaders(settings)
 
-    defense.test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, lowProFool)
+    #defense.test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, lowProFool)
     defense.test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, deepfool)
 
 

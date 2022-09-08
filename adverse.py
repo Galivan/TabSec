@@ -61,7 +61,7 @@ def gen_adv(model, config, method, df_test, n=-1):
         total_loop_change += loop_i
         pert = x_adv - x_tensor.numpy()
 
-        if orig_pred != adv_pred:
+        if orig_pred.item() != adv_pred.item():
             n_success += 1
             pert_norms.append(np.linalg.norm(pert))
             weighted_pert_norms.append(np.linalg.norm(weights * pert))

@@ -97,14 +97,33 @@ class TabNetClassifier(TabModel):
 
         results = []
         for batch_nb, data in enumerate(dataloader):
-            data = data.to(self.device).float()
+            data = data.to(self.device)
 
             output, M_loss = self.network(data)
-            predictions = torch.nn.Softmax(dim=1)(output).cpu().detach().numpy()
+            predictions = torch.nn.Softmax(dim=1)(output)
             results.append(predictions)
-        res = np.vstack(results)
-        return res
 
+        return results
+
+    def predict_proba_2(self, X):
+        """
+        Make predictions for classification on a batch (valid)
+
+        Parameters
+        ----------
+        X : a :tensor: `torch.Tensor`
+            Input data
+
+        Returns
+        -------
+        res : np.ndarray
+
+        """
+        self.network.eval()
+        output, M_loss = self.network(X)
+
+        predictions = torch.nn.Softmax(dim=1)(output)
+        return predictions
 
 class TabNetRegressor(TabModel):
     def __post_init__(self):
