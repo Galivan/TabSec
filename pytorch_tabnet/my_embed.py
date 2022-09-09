@@ -3,7 +3,6 @@ import torch
 from functools import reduce
 
 
-
 class EmbeddingMul(torch.nn.Module):
     def __init__(self, num_embeddings: int, embedding_dim: int, eps=1e-4):
         super(EmbeddingMul, self).__init__()

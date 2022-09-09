@@ -1,7 +1,13 @@
-import torch
 import keras
+import torch
+import numpy as np
+import os
 
 from keras.utils import np_utils
+from sklearn.metrics import roc_auc_score
+
+from pytorch_tabnet.tab_model import TabNetClassifier
+from pytorch_tabnet.augmentations import ClassificationSMOTE
 
 
 class Trainer:
@@ -91,3 +97,57 @@ def train_bce_adam_model(model, device, train_dataloader, lr, epochs):
     trainer = Trainer(model, device, loss_func, optimizer)
     trainer.train(epochs, train_dataloader)
     return trainer.get_data()
+
+
+def get_trained_tabnet_model(config):
+    cat_idxs = config['cat_idxs']
+    cat_dims = config['cat_dims']
+
+    train = config['train']
+    features = config['FeatureNames']
+
+    target = config['Target']
+    train_indices = config['train_indices']
+    valid_indices = config['valid_indices']
+    test_indices = config['test_indices']
+
+    tabnet_params = {"cat_idxs":cat_idxs,
+                     "cat_dims":cat_dims,
+                     "cat_emb_dim":1,
+                     "optimizer_fn":torch.optim.Adam,
+                     "optimizer_params":dict(lr=2e-3),
+                     "scheduler_params":{"step_size":20, # how to use learning rate scheduler
+                                         "gamma":0.9},
+                     "scheduler_fn":torch.optim.lr_scheduler.StepLR,
+                     "mask_type":'entmax' # "sparsemax"
+                     }
+
+    clf = TabNetClassifier(**tabnet_params
+                           )
+
+    X_train = train[features].values[train_indices]
+    y_train = train[target].values[train_indices]
+
+    X_valid = train[features].values[valid_indices]
+    y_valid = train[target].values[valid_indices]
+
+    max_epochs = config['epochs'] if not os.getenv("CI", False) else 2
+
+    aug = ClassificationSMOTE(p=0.2)
+
+    save_history = []
+
+    clf.fit(
+        X_train=X_train, y_train=y_train,
+        eval_set=[(X_train, y_train), (X_valid, y_valid)],
+        eval_name=['train', 'valid'],
+        eval_metric=['auc'],
+        max_epochs=max_epochs, patience=int(max_epochs/5),
+        batch_size=1024, virtual_batch_size=128,
+        num_workers=0,
+        weights=1,
+        drop_last=False,
+        augmentations=aug, #aug, None
+    )
+    save_history.append(clf.history["valid_auc"])
+    return clf

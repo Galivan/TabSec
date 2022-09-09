@@ -4,6 +4,7 @@ from sklearn import svm
 from torch.utils.data import DataLoader
 
 from adverse import gen_adv
+from adverse_tabnet import gen_adv as tabnet_gen_adv
 import numpy as np
 
 from tabular_dataset import TabularDataset
@@ -68,4 +69,36 @@ class SVMDiscriminator:
 
         return (n_correct_real/n_real), (n_correct_adv/n_adv)
 
+
+class TabnetSVMDiscriminator(SVMDiscriminator):
+    def __init__(self, settings, model, adv_method, is_weighted=True, c=1.0, kernel='rbf', degree=3, gamma='scale'):
+        super().__init__(settings, model, adv_method, is_weighted, c, kernel, degree, gamma)
+
+    def train(self, samples_df):
+        orig_examples, df, s_rate, pert_norms, w_pert_norms = tabnet_gen_adv(self.model, self.settings, self.adv_method, samples_df, n=10)
+        assert not df.empty
+        orig_examples, df, s_rate, pert_norms_2, w_pert_norms_2 = tabnet_gen_adv(self.model, self.settings, self.adv_method, df)
+        assert not df.empty
+        if self.is_weighted:
+            norm_samples = np.concatenate((w_pert_norms, w_pert_norms_2))
+        else:
+            norm_samples = np.concatenate((pert_norms, pert_norms_2))
+        labels = np.concatenate((np.zeros(len(pert_norms)), np.ones(len(pert_norms_2))))
+        norm_samples = norm_samples.reshape(-1, 1)
+        self.clf.fit(norm_samples, labels)
+
+    def predict(self, sample):
+        """
+        Predict is the sample adversarial or not. 1 - is adv. 0 - not.
+        :param sample: A single tabular entry
+        :return: Prediction is the sample adversarial or not
+        """
+        orig_examples, df, s_rate, pert_norms, w_pert_norms = tabnet_gen_adv(self.model, self.settings, self.adv_method, sample)
+        if self.is_weighted:
+            norm_samples = w_pert_norms
+        else:
+            norm_samples = pert_norms
+        if df.empty:
+            return np.array([0])
+        return self.clf.predict(np.array(norm_samples).reshape(-1, 1))
 

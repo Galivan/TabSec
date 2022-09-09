@@ -6,10 +6,13 @@ from torch.utils.data import DataLoader
 
 import metrics
 import tester
+import trainer
 from adverse import gen_adv
+import adverse_tabnet
+from data_preparation import prepare_data
 from def_finetune import test_fine_tuning
-from def_svm_dicriminator import SVMDiscriminator
-from def_svm_model import SvmModel
+from def_svm_dicriminator import SVMDiscriminator, TabnetSVMDiscriminator
+from def_svm_model import SvmModel, TabnetSvmModel
 from model import Net
 from tabular_dataset import TabularDataset
 from tester import test_bce_model
@@ -50,6 +53,12 @@ def test_svm_discriminator(settings, model, adv_method, train_df, real_test_df, 
     svm_discriminator.train(train_df)
     return svm_discriminator.test(real_test_df, adv_test_df)
 
+def test_tabnet_svm_discriminator(settings, model, adv_method, train_df, real_test_df, adv_test_df,
+                           is_weighted=True, c=1.0, kernel='rbf', degree=3, gamma='scale'):
+    svm_discriminator = TabnetSVMDiscriminator(settings, model, adv_method, is_weighted, c, kernel, degree, gamma)
+    svm_discriminator.train(train_df)
+    return svm_discriminator.test(real_test_df, adv_test_df)
+
 
 def test_svm_model(settings, device, model, adv_method, train_df, adv_df, benign_df,
                    is_weighted=True, c=1.0, kernel='rbf', degree=3, gamma='scale'):
@@ -81,6 +90,36 @@ def test_svm_model(settings, device, model, adv_method, train_df, adv_df, benign
                        ["Original Model", "SVM Boosted Model"],
                        data)
 
+
+def test_tabnet_svm_model(settings, device, model, adv_method, train_df, adv_df, benign_df,
+                   is_weighted=True, c=1.0, kernel='rbf', degree=3, gamma='scale'):
+
+    adv_df['target'] = benign_df['target'].values
+    feature_names, target = settings['FeatureNames'], settings['Target']
+    adv_test_loader = DataLoader(TabularDataset(adv_df, feature_names, target, False), batch_size=1)
+    benign_test_loader = DataLoader(TabularDataset(benign_df, feature_names, target, False), batch_size=1)
+
+    total_len = len(adv_test_loader) + len(benign_test_loader)
+    svm_discriminator = TabnetSVMDiscriminator(settings, model, adv_method, is_weighted, c, kernel, degree, gamma)
+    svm_discriminator.train(train_df)
+    svm_model = TabnetSvmModel(settings, model, svm_discriminator)
+
+    svm_model_adv_acc = svm_model.test(adv_df)
+    svm_model_benign_acc = svm_model.test(benign_df)
+    svm_model_total_acc = (svm_model_adv_acc * len(adv_test_loader) +
+                           svm_model_benign_acc * len(benign_test_loader)) / total_len
+
+    model_adv_acc = tester.test_tabnet_model(model, settings,adv_df, 'credit-g')
+    model_benign_acc = tester.test_tabnet_model(model, settings,benign_df, 'credit-g')
+    model_total_acc = (model_adv_acc * len(adv_test_loader) +
+                       model_benign_acc * len(benign_test_loader)) / total_len
+    data = [[model_adv_acc, model_benign_acc, model_total_acc],
+            [svm_model_adv_acc, svm_model_benign_acc, svm_model_total_acc]]
+    adv_p = (len(adv_test_loader)/total_len)*100
+    metrics.show_table(f"SVM Boosted Model Results - {adv_p:.2f}% adversarial ",
+                       ["Adv. Acc.", "Benign Acc.", "Total Acc."],
+                       ["Original Model", "SVM Boosted Model"],
+                       data)
 
 def test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, method):
     # + configurations for adversarial generation
@@ -132,6 +171,54 @@ def test_normal_model(settings, device, train_dataloader, test_dataloader, dimen
 
     print(f"Testing fine tuning on {method}...")
     ft_lpf_model_clone = copy.deepcopy(nn_model)
+    test_fine_tuning(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf_test, lpf_test_data,method, settings)
+    real_sr_ft, adv_sr_ft = test_svm_discriminator(settings, ft_lpf_model_clone, method, settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
+
+    print(f"Success rate after FT: real data - {real_sr_ft}, adv data - {adv_sr_ft}")
+
+def def_tabnet_model(settings, device, train_dataloader, test_dataloader, dimensions, method):
+    test_string = "epochs={0}, lr={1}, scale_max={2}, alpha={3},\n" \
+                  " lambda={4}, max_iters={5}, method={6}".format(settings['epochs'],
+                                                                  settings['lr'],
+                                                                  settings['scale_max'],
+                                                                  settings['Alpha'],
+                                                                  settings['Lambda'],
+                                                                  settings['MaxIters'],
+                                                                  method)
+    settings['test_string'] = test_string
+    settings['dataset_name'] = 'credit-g'
+    settings['Target'] = 'target'
+    plt.figure(figsize=(15, 10))
+
+    settings = prepare_data(settings)
+    tabnet_model = trainer.get_trained_tabnet_model(settings)
+    settings["Model"] = tabnet_model
+
+    tester.test_tabnet_model(tabnet_model, settings, settings['TestData'], 'credit-g')
+
+
+
+    # Generate adversarial examples
+    print("Generating adversarial examples for training...")
+    orig_examples, df_adv_lpf, *lpf_train_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
+                                                         settings['train'], n=settings['n_train_adv'])
+
+    print("Generating adversarial examples for testing...")
+    orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
+                                                                      settings['TestData'], n=settings['n_train_adv'])
+    is_weighted = True if method == 'LowProFool' else False
+    print("Testing SVM Accuracy")
+    real_sr, adv_sr = test_tabnet_svm_discriminator(settings, tabnet_model, method,
+                                             settings['train'], orig_examples_lpf_test, df_adv_lpf_test, is_weighted)
+
+    print(f"Real SR = {real_sr}, adv SR = {adv_sr}")
+    test_tabnet_svm_model(settings, device, tabnet_model, method, settings['train'],
+                   df_adv_lpf_test, orig_examples_lpf_test)
+
+    settings['AdvData'] = {method: df_adv_lpf}
+
+    print(f"Testing fine tuning on {method}...")
+    ft_lpf_model_clone = copy.deepcopy(tabnet_model)
     test_fine_tuning(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf_test, lpf_test_data,method, settings)
     real_sr_ft, adv_sr_ft = test_svm_discriminator(settings, ft_lpf_model_clone, method, settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
 

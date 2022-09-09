@@ -1,5 +1,7 @@
+import numpy as np
 import torch
 import keras
+from sklearn.metrics import roc_auc_score, accuracy_score, balanced_accuracy_score
 
 
 class Tester():
@@ -36,3 +38,18 @@ def test_bce_model(model, device, test_dataloader):
     tester = Tester(model, device, loss_func)
     return tester.test(test_dataloader)
 
+
+def test_tabnet_model(clf, settings, test_df, dataset_name):
+    features = settings['FeatureNames']
+    target = settings['Target']
+    X_test = test_df[features].values
+    y_test = test_df[target].values
+    preds = np.vstack([x.cpu().detach().numpy() for x in clf.predict_proba(X_test)])
+    test_auc = roc_auc_score(y_score=preds[:,1], y_true=y_test)
+    print(f"FINAL TEST roc_auc_score FOR {dataset_name} : {test_auc}")
+    preds = np.argmax(preds, 1)
+    test_auc = accuracy_score(y_pred=preds, y_true=y_test)
+    print(f"FINAL TEST accuracy_score FOR {dataset_name} : {test_auc}")
+    test_auc = balanced_accuracy_score(y_pred=preds, y_true=y_test)
+    print(f"FINAL TEST balanced_accuracy_score FOR {dataset_name} : {test_auc}")
+    return test_auc
