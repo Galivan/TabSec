@@ -46,7 +46,8 @@ def main():
                        'Alpha': 0.001,
                        'Lambda': 8.5,
                        'scale_max': 10,
-                       'n_train_adv': 50
+                       'n_train_adv': 15,
+                       'Seed': SEED
                        }
     torch.manual_seed(SEED)
     np.random.seed(SEED)
@@ -57,7 +58,8 @@ def main():
 
     #defense.test_normal_model(normal_settings, device, train_dataloader, test_dataloader, dimensions, lowProFool)
     #defense.test_normal_model(normal_settings, device, train_dataloader, test_dataloader, dimensions, deepfool)
-    defense.def_tabnet_model(tabnet_settings, device, train_dataloader, test_dataloader, dimensions, deepfool)
+    defense.def_tabnet_model(tabnet_settings, device, lowProFool)
+    defense.def_tabnet_model(tabnet_settings, device, deepfool)
 
 
 

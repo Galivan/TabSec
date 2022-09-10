@@ -39,7 +39,8 @@ def test_bce_model(model, device, test_dataloader):
     return tester.test(test_dataloader)
 
 
-def test_tabnet_model(clf, settings, test_df, dataset_name):
+def test_tabnet_model(clf, settings, test_df):
+    dataset_name = settings['dataset_name']
     features = settings['FeatureNames']
     target = settings['Target']
     X_test = test_df[features].values
@@ -48,8 +49,8 @@ def test_tabnet_model(clf, settings, test_df, dataset_name):
     test_auc = roc_auc_score(y_score=preds[:,1], y_true=y_test)
     print(f"FINAL TEST roc_auc_score FOR {dataset_name} : {test_auc}")
     preds = np.argmax(preds, 1)
-    test_auc = accuracy_score(y_pred=preds, y_true=y_test)
-    print(f"FINAL TEST accuracy_score FOR {dataset_name} : {test_auc}")
-    test_auc = balanced_accuracy_score(y_pred=preds, y_true=y_test)
-    print(f"FINAL TEST balanced_accuracy_score FOR {dataset_name} : {test_auc}")
-    return test_auc
+    test_acc = accuracy_score(y_pred=preds, y_true=y_test)
+    print(f"FINAL TEST accuracy_score FOR {dataset_name} : {test_acc}")
+    test_bal_acc = balanced_accuracy_score(y_pred=preds, y_true=y_test)
+    print(f"FINAL TEST balanced_accuracy_score FOR {dataset_name} : {test_bal_acc}")
+    return test_acc

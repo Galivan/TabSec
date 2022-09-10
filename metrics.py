@@ -11,7 +11,7 @@ def show_finetuning_metrics(pre_defense_data, post_defense_data, tag):
     :param tag: T
     :return:
     """
-    column_headers = ["Success Rate", "Norm Mean", "Norm STD", "W. Norm Mean", "W. Norm STD", "Test Loss", "Test Acc."]
+    column_headers = ["Success Rate", "Norm Mean", "Norm STD", "W. Norm Mean", "W. Norm STD", "Test Acc."]
     row_headers = ['Before', 'After', 'After/Before']
     pre_defense_row = get_row(pre_defense_data)
     post_defense_row = get_row(post_defense_data)
@@ -27,9 +27,8 @@ def get_row(metrics):
     std = np.std(metrics[1])
     w_mean = np.mean(metrics[2])
     w_std = np.std(metrics[2])
-    test_loss = metrics[-2]
     test_acc = metrics[-1]
-    row = [sr, mean, std, w_mean, w_std, test_loss, test_acc]
+    row = [sr, mean, std, w_mean, w_std, test_acc]
     return np.array([f'{x:1.5f}' for x in row], dtype=float)
 
 

@@ -49,6 +49,7 @@ def split_data(config):
     config['valid_indices'] = valid_indices
     config['test_indices'] = test_indices
     config['TestData'] = train.iloc[test_indices]
+    config['ValidData'] = train.iloc[valid_indices]
 
 
 def label_and_encode_cat_features(config):

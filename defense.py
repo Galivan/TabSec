@@ -11,6 +11,7 @@ from adverse import gen_adv
 import adverse_tabnet
 from data_preparation import prepare_data
 from def_finetune import test_fine_tuning
+from def_tabnet_finetune import test_fine_tuning_tabnet
 from def_svm_dicriminator import SVMDiscriminator, TabnetSVMDiscriminator
 from def_svm_model import SvmModel, TabnetSvmModel
 from model import Net
@@ -91,7 +92,7 @@ def test_svm_model(settings, device, model, adv_method, train_df, adv_df, benign
                        data)
 
 
-def test_tabnet_svm_model(settings, device, model, adv_method, train_df, adv_df, benign_df,
+def test_tabnet_svm_model(settings, model, adv_method, train_df, adv_df, benign_df,
                    is_weighted=True, c=1.0, kernel='rbf', degree=3, gamma='scale'):
 
     adv_df['target'] = benign_df['target'].values
@@ -109,8 +110,8 @@ def test_tabnet_svm_model(settings, device, model, adv_method, train_df, adv_df,
     svm_model_total_acc = (svm_model_adv_acc * len(adv_test_loader) +
                            svm_model_benign_acc * len(benign_test_loader)) / total_len
 
-    model_adv_acc = tester.test_tabnet_model(model, settings,adv_df, 'credit-g')
-    model_benign_acc = tester.test_tabnet_model(model, settings,benign_df, 'credit-g')
+    model_adv_acc = tester.test_tabnet_model(model, settings, adv_df)
+    model_benign_acc = tester.test_tabnet_model(model, settings, benign_df)
     model_total_acc = (model_adv_acc * len(adv_test_loader) +
                        model_benign_acc * len(benign_test_loader)) / total_len
     data = [[model_adv_acc, model_benign_acc, model_total_acc],
@@ -120,6 +121,8 @@ def test_tabnet_svm_model(settings, device, model, adv_method, train_df, adv_df,
                        ["Adv. Acc.", "Benign Acc.", "Total Acc."],
                        ["Original Model", "SVM Boosted Model"],
                        data)
+
+
 
 def test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, method):
     # + configurations for adversarial generation
@@ -176,7 +179,7 @@ def test_normal_model(settings, device, train_dataloader, test_dataloader, dimen
 
     print(f"Success rate after FT: real data - {real_sr_ft}, adv data - {adv_sr_ft}")
 
-def def_tabnet_model(settings, device, train_dataloader, test_dataloader, dimensions, method):
+def def_tabnet_model(settings, device, method):
     test_string = "epochs={0}, lr={1}, scale_max={2}, alpha={3},\n" \
                   " lambda={4}, max_iters={5}, method={6}".format(settings['epochs'],
                                                                   settings['lr'],
@@ -194,7 +197,7 @@ def def_tabnet_model(settings, device, train_dataloader, test_dataloader, dimens
     tabnet_model = trainer.get_trained_tabnet_model(settings)
     settings["Model"] = tabnet_model
 
-    tester.test_tabnet_model(tabnet_model, settings, settings['TestData'], 'credit-g')
+    tabnet_acc = tester.test_tabnet_model(tabnet_model, settings, settings['TestData'])
 
 
 
@@ -207,21 +210,22 @@ def def_tabnet_model(settings, device, train_dataloader, test_dataloader, dimens
     orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
                                                                       settings['TestData'], n=settings['n_train_adv'])
     is_weighted = True if method == 'LowProFool' else False
+    lpf_test_data.append(tabnet_acc)
     print("Testing SVM Accuracy")
     real_sr, adv_sr = test_tabnet_svm_discriminator(settings, tabnet_model, method,
                                              settings['train'], orig_examples_lpf_test, df_adv_lpf_test, is_weighted)
 
     print(f"Real SR = {real_sr}, adv SR = {adv_sr}")
-    test_tabnet_svm_model(settings, device, tabnet_model, method, settings['train'],
+    test_tabnet_svm_model(settings, tabnet_model, method, settings['train'],
                    df_adv_lpf_test, orig_examples_lpf_test)
 
     settings['AdvData'] = {method: df_adv_lpf}
 
     print(f"Testing fine tuning on {method}...")
-    ft_lpf_model_clone = copy.deepcopy(tabnet_model)
-    test_fine_tuning(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf_test, lpf_test_data,method, settings)
-    real_sr_ft, adv_sr_ft = test_svm_discriminator(settings, ft_lpf_model_clone, method, settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
+    ft_model_clone = copy.deepcopy(tabnet_model)
+    test_fine_tuning_tabnet(ft_model_clone, device, settings['TestData'], df_adv_lpf_test, lpf_test_data, method, settings)
+    test_tabnet_svm_model(settings, ft_model_clone, method, settings['train'],
+                          df_adv_lpf_test, orig_examples_lpf_test)
 
-    print(f"Success rate after FT: real data - {real_sr_ft}, adv data - {adv_sr_ft}")
 
 
