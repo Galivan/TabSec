@@ -103,13 +103,10 @@ def get_trained_tabnet_model(config):
     cat_idxs = config['cat_idxs']
     cat_dims = config['cat_dims']
 
-    train = config['train']
+    train_data = config['TrainData']
+    validation_data = config['ValidData']
     features = config['FeatureNames']
-
     target = config['Target']
-    train_indices = config['train_indices']
-    valid_indices = config['valid_indices']
-    test_indices = config['test_indices']
 
     tabnet_params = {"cat_idxs":cat_idxs,
                      "cat_dims":cat_dims,
@@ -125,11 +122,11 @@ def get_trained_tabnet_model(config):
     clf = TabNetClassifier(**tabnet_params
                            )
 
-    X_train = train[features].values[train_indices]
-    y_train = train[target].values[train_indices]
+    X_train = train_data[features].values
+    y_train = train_data[target].values
 
-    X_valid = train[features].values[valid_indices]
-    y_valid = train[target].values[valid_indices]
+    X_valid = validation_data[features].values
+    y_valid = validation_data[target].values
 
     max_epochs = config['epochs'] if not os.getenv("CI", False) else 2
 

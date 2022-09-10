@@ -203,29 +203,32 @@ def def_tabnet_model(settings, device, method):
 
     # Generate adversarial examples
     print("Generating adversarial examples for training...")
-    orig_examples, df_adv_lpf, *lpf_train_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
-                                                         settings['train'], n=settings['n_train_adv'])
+    orig_examples_train, df_adv_train, *lpf_train_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
+                                                                                settings['TrainData'],
+                                                                                n=settings['n_train_adv'])
 
     print("Generating adversarial examples for testing...")
-    orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
-                                                                      settings['TestData'], n=settings['n_train_adv'])
+    orig_examples_test, df_adv_test, *lpf_test_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
+                                                                             settings['TestData'],
+                                                                             n=settings['n_train_adv'])
     is_weighted = True if method == 'LowProFool' else False
     lpf_test_data.append(tabnet_acc)
     print("Testing SVM Accuracy")
     real_sr, adv_sr = test_tabnet_svm_discriminator(settings, tabnet_model, method,
-                                             settings['train'], orig_examples_lpf_test, df_adv_lpf_test, is_weighted)
+                                                    settings['TrainData'], orig_examples_test,
+                                                    df_adv_test, is_weighted)
 
     print(f"Real SR = {real_sr}, adv SR = {adv_sr}")
-    test_tabnet_svm_model(settings, tabnet_model, method, settings['train'],
-                   df_adv_lpf_test, orig_examples_lpf_test)
+    test_tabnet_svm_model(settings, tabnet_model, method, settings['TrainData'],
+                   df_adv_test, orig_examples_test)
 
-    settings['AdvData'] = {method: df_adv_lpf}
+    settings['AdvData'] = {method: df_adv_train}
 
     print(f"Testing fine tuning on {method}...")
     ft_model_clone = copy.deepcopy(tabnet_model)
-    test_fine_tuning_tabnet(ft_model_clone, device, settings['TestData'], df_adv_lpf_test, lpf_test_data, method, settings)
-    test_tabnet_svm_model(settings, ft_model_clone, method, settings['train'],
-                          df_adv_lpf_test, orig_examples_lpf_test)
+    test_fine_tuning_tabnet(ft_model_clone, device, settings['TestData'], df_adv_test, lpf_test_data, method, settings)
+    test_tabnet_svm_model(settings, ft_model_clone, method, settings['TrainData'],
+                          df_adv_test, orig_examples_test)
 
 
 

@@ -37,7 +37,7 @@ class SVMDiscriminator:
         :param sample: A single tabular entry
         :return: Prediction is the sample adversarial or not
         """
-        orig_examples, df, s_rate, pert_norms, w_pert_norms = gen_adv(self.model, self.settings, self.adv_method, sample)
+        orig_examples, df, s_rate, pert_norms, w_pert_norms = gen_adv(self.model, self.settings, self.adv_method, sample, progress=False)
         if self.is_weighted:
             norm_samples = w_pert_norms
         else:
@@ -75,9 +75,12 @@ class TabnetSVMDiscriminator(SVMDiscriminator):
         super().__init__(settings, model, adv_method, is_weighted, c, kernel, degree, gamma)
 
     def train(self, samples_df):
-        orig_examples, df, s_rate, pert_norms, w_pert_norms = tabnet_gen_adv(self.model, self.settings, self.adv_method, samples_df, n=10)
+        orig_examples, df, s_rate, pert_norms, w_pert_norms = tabnet_gen_adv(self.model, self.settings,
+                                                                             self.adv_method,
+                                                                             samples_df, n=10, progress=False)
         assert not df.empty
-        orig_examples, df, s_rate, pert_norms_2, w_pert_norms_2 = tabnet_gen_adv(self.model, self.settings, self.adv_method, df)
+        orig_examples, df, s_rate, pert_norms_2, w_pert_norms_2 = tabnet_gen_adv(self.model, self.settings,
+                                                                                 self.adv_method, df, progress=False)
         assert not df.empty
         if self.is_weighted:
             norm_samples = np.concatenate((w_pert_norms, w_pert_norms_2))
@@ -93,7 +96,7 @@ class TabnetSVMDiscriminator(SVMDiscriminator):
         :param sample: A single tabular entry
         :return: Prediction is the sample adversarial or not
         """
-        orig_examples, df, s_rate, pert_norms, w_pert_norms = tabnet_gen_adv(self.model, self.settings, self.adv_method, sample)
+        orig_examples, df, s_rate, pert_norms, w_pert_norms = tabnet_gen_adv(self.model, self.settings, self.adv_method, sample, progress=False)
         if self.is_weighted:
             norm_samples = w_pert_norms
         else:

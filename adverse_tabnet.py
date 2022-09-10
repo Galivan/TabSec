@@ -13,7 +13,7 @@ from tqdm import tqdm
 from tqdm import tqdm_notebook
 
 
-def gen_adv(model, config, method, df_test, n=-1):
+def gen_adv(model, config, method, df_test, n=-1, progress=True):
     """
     Generate adversarial examples from given data, using a specific method
     :param model: NN Model we want to fool
@@ -43,7 +43,7 @@ def gen_adv(model, config, method, df_test, n=-1):
     pert_norms = []
     total_loop_change = 0
     weighted_pert_norms = []
-    for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method)):
+    for _, row in tqdm(df_test.iterrows(), total=df_test.shape[0], desc="{}".format(method), disable=(not progress)):
         i += 1
         x = row[feature_names].values
         n_samples += 1
