@@ -86,8 +86,8 @@ def clip(current, low_bound, up_bound):
     :return: List of clipped values
     """
     assert(len(current) == len(up_bound) and len(low_bound) == len(up_bound))
-    low_bound = torch.FloatTensor(low_bound)
-    up_bound = torch.FloatTensor(up_bound)
+    low_bound = torch.FloatTensor(low_bound).to(current.device)
+    up_bound = torch.FloatTensor(up_bound).to(current.device)
     clipped = torch.max(torch.min(current, up_bound), low_bound)
     return clipped
 
@@ -106,35 +106,38 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
     :return: original label prediction, final label prediction, adversarial examples x', iteration at which the class changed
     """
 
-    r = Variable(torch.FloatTensor(1e-4 * np.ones(x.numpy().shape)), requires_grad=True) 
-    v = torch.FloatTensor(np.array(weights))
+    r = torch.FloatTensor(1e-4 * np.ones(x.shape))
+    r = r.to(model.device)
+    r.requires_grad_()
+    r.retain_grad()
+    v = torch.FloatTensor(np.array(weights)).to(model.device)
 
     x_into_model = np.expand_dims(x, axis=0)
-    x = torch.tensor(x)
-
-    output = model.forward(x)
-    orig_pred = output.max(0, keepdim=True)[1].cpu().numpy()
+    x = torch.FloatTensor(x_into_model).to(model.device)
+    x = Variable(x, requires_grad=True)
+    output = model.predict_proba_2(x)[0]
+    orig_pred = output.max(0, keepdim=True)[1].to('cpu').numpy()
     target_pred = np.abs(1 - orig_pred)
-    
-    target = np.array([0., 1.]) if target_pred == 1 else np.array([1., 0.])
-    target = Variable(torch.tensor(target, requires_grad=False)) 
-    
-    lambda_ = torch.tensor([lambda_])
-    
+
+    target = np.array([0., 1.], dtype=np.float32) if target_pred == 1 else np.array([1., 0.], dtype=np.float32)
+    target = Variable(torch.tensor(target, requires_grad=False)).to(model.device)
+
+    lambda_ = torch.tensor([lambda_]).to(model.device)
+
     bce = nn.BCELoss()
     l1 = lambda v, r: torch.sum(torch.abs(v * r)) #L1 norm
     l2 = lambda v, r: torch.sqrt(torch.sum(torch.mul(v * r,v * r))) #L2 norm
 
     best_norm_weighted = np.inf
     best_pert_x = x
-    
+
     loop_i, loop_change_class = 0, 0
     while loop_i < maxiters:
-            
+
         if r.grad is not None:
             r.grad.zero_()
-        
-        # Computing loss 
+
+        # Computing loss
         loss_1 = bce(output, target)
         loss_2 = l2(v, r)
         loss = (loss_1 + lambda_ * loss_2)
@@ -145,29 +148,32 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
 
         # Guide perturbation to the negative of the gradient
         ri = - grad_r
-    
+
         # limit huge step
         ri *= alpha
 
         # Adds new perturbation to total perturbation
         r = r.clone().detach().cpu().numpy() + ri
-        
+
         # For later computation
         r_norm_weighted = np.sum(np.abs(r * weights))
-        
+
         # Ready to feed the model
-        r = Variable(torch.FloatTensor(r), requires_grad=True) 
-        
+        r = Variable(torch.FloatTensor(r), requires_grad=True)
+        r = r.to(model.device)
+        r.requires_grad_()
+        r.retain_grad()
         # Compute adversarial example
-        xprime = x + r
-    
+        xprime = x.to(r.device) + r
+
         # Clip to stay in legitimate bounds
-        xprime = clip(xprime, bounds[0], bounds[1])
-        
+        xprime = clip(xprime[0], bounds[0], bounds[1]).unsqueeze(0)
+
         # Classify adversarial example
-        output = model.forward(xprime)
-        output_pred = output.max(0, keepdim=True)[1].cpu().numpy()
-        
+        x = Variable(xprime)
+        output = model.predict_proba_2(x)[0]
+        output_pred = output.max(0, keepdim=True)[1].to('cpu').numpy()
+
         # Keep the best adverse at each iterations
         if output_pred != orig_pred and r_norm_weighted < best_norm_weighted:
             best_r = r
@@ -176,13 +182,13 @@ def lowProFool(x, model, weights, bounds, maxiters, alpha, lambda_):
 
         if output_pred == orig_pred:
             loop_change_class += 1
-            
-        loop_i += 1 
-        
+
+        loop_i += 1
+
     # Clip at the end no matter what
-    best_pert_x = clip(best_pert_x, bounds[0], bounds[1])
-    output = model.forward(best_pert_x)
-    output_pred = output.max(0, keepdim=True)[1].cpu().numpy()
+    best_pert_x = clip(best_pert_x[0], bounds[0], bounds[1])
+    output = model.predict_proba_2(best_pert_x.unsqueeze(0))[0]
+    output_pred = output.max(0, keepdim=True)[1].to('cpu').numpy()
     return orig_pred, output_pred, best_pert_x.clone().detach().cpu().numpy(), loop_change_class
 
 # Forked from https://github.com/LTS4/DeepFool

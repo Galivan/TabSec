@@ -38,7 +38,7 @@ def main():
                        'n_train_adv': 100
                        }
     tabnet_settings = {'batch_size': 100,
-                       'epochs': 500,
+                       'epochs': 50,
                        'hidden_dim': 100,
                        'layers': 5,
                        'lr': 0.1,
@@ -46,7 +46,7 @@ def main():
                        'Alpha': 0.001,
                        'Lambda': 8.5,
                        'scale_max': 10,
-                       'n_train_adv': 15,
+                       'n_train_adv': 20,
                        'Seed': SEED
                        }
     torch.manual_seed(SEED)

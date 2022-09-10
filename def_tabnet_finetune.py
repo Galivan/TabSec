@@ -32,7 +32,7 @@ def fine_tune_tabnet(model, device, adverse_data, settings):
 
     X = adverse_data[features]
     y = adverse_data[target]
-    X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=settings['Seed'])
+    X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=settings['Seed'], stratify=y)
     max_epochs = settings['epochs'] if not os.getenv("CI", False) else 2
 
     aug = ClassificationSMOTE(p=0.2)
