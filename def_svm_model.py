@@ -56,7 +56,7 @@ class TabnetSvmModel:
     def test(self, test_df):
         n_correct = 0
         n_samples = 0
-        for _, row in tqdm(test_df.iterrows(), total=test_df.shape[0], desc="{}".format("SVM Model Test")):
+        for _, row in tqdm(test_df.iterrows(), total=test_df.shape[0], desc="{}".format("SVM Model Test"), disable=False):
             x = row[self.settings['FeatureNames']]
             target = row[self.settings['Target']]
             prediciton = self.classify(x)

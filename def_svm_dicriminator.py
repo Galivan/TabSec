@@ -1,13 +1,12 @@
-import keras
 import pandas as pd
 from sklearn import svm
-from torch.utils.data import DataLoader
+import tqdm
+from tqdm import tqdm
 
 from adverse import gen_adv
 from adverse_tabnet import gen_adv as tabnet_gen_adv
 import numpy as np
 
-from tabular_dataset import TabularDataset
 
 
 class SVMDiscriminator:
@@ -48,7 +47,7 @@ class SVMDiscriminator:
 
     def predict_multilpe(self, samples):
         results = []
-        for _, row in samples.iterrows():
+        for _, row in tqdm(samples.iterrows(), total=samples.shape[0], desc="{}".format("SVM Model Test"), disable=False):
             results.append(self.predict(pd.DataFrame(row).transpose()))
         return np.array(results).reshape(-1, 1)
 
@@ -77,10 +76,10 @@ class TabnetSVMDiscriminator(SVMDiscriminator):
     def train(self, samples_df):
         orig_examples, df, s_rate, pert_norms, w_pert_norms = tabnet_gen_adv(self.model, self.settings,
                                                                              self.adv_method,
-                                                                             samples_df, n=10, progress=False)
+                                                                             samples_df, n=10)
         assert not df.empty
         orig_examples, df, s_rate, pert_norms_2, w_pert_norms_2 = tabnet_gen_adv(self.model, self.settings,
-                                                                                 self.adv_method, df, progress=False)
+                                                                                 self.adv_method, df)
         assert not df.empty
         if self.is_weighted:
             norm_samples = np.concatenate((w_pert_norms, w_pert_norms_2))
