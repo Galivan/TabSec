@@ -12,7 +12,7 @@ class SvmModel:
         self.svm_disc = svm_disc
 
     def classify(self, sample):
-        model_predict = self.model(torch.tensor(sample))
+        model_predict = self.model(torch.tensor(sample, dtype=float))
         label = model_predict.max(0, keepdim=True)[1].cpu().numpy()[0]
 
         is_adv = self.svm_disc.predict(pd.DataFrame(sample).transpose())

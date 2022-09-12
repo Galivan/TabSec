@@ -32,7 +32,7 @@ def get_train_test_dataset(settings, dataset_name, test_size=None, train_size=No
     # Compute the weights modelizing the expert's knowledge
     weights = get_weights(dataframe, target)
 
-    train_df, test_df = train_test_split(dataframe, test_size=test_size, train_size=train_size,
+    train_df, test_df = train_test_split(dataframe.astype(np.float32), test_size=test_size, train_size=train_size,
                                          random_state=seed, shuffle=True)
 
     settings['TrainData'] = train_df

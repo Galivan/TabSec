@@ -121,7 +121,7 @@ def test_tabnet_svm_model(settings, model, adv_method, train_df, adv_df, benign_
 
 def test_normal_model(settings, device, train_dataloader, test_dataloader, dimensions, method):
     # + configurations for adversarial generation
-    test_string = "epochs={0}, lr={1}, scale_max={2}, alpha={3},\n" \
+    test_string = "FCNN - epochs={0}, lr={1}, scale_max={2}, alpha={3},\n" \
                   " lambda={4}, max_iters={5}, method={6}".format(settings['epochs'],
                                                                   settings['lr'],
                                                                   settings['scale_max'],
@@ -156,13 +156,13 @@ def test_normal_model(settings, device, train_dataloader, test_dataloader, dimen
     orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, method,
                                                                       settings['TestData'], n=settings['n_train_adv'])
     is_weighted = True if method == 'LowProFool' else False
-    print("Testing SVM Accuracy")
+    # print("Testing SVM Accuracy")
     real_sr, adv_sr = test_svm_discriminator(settings, nn_model, method,
                                              settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test, is_weighted)
 
     print(f"Real SR = {real_sr}, adv SR = {adv_sr}")
     test_svm_model(settings, device, nn_model, method, settings['TrainData'],
-                           df_adv_lpf_test, orig_examples_lpf_test)
+                           df_adv_lpf_test.astype(np.float32), orig_examples_lpf_test)
 
     lpf_test_data.extend(test_data)
     settings['AdvData'] = {method: df_adv_lpf}
@@ -170,8 +170,11 @@ def test_normal_model(settings, device, train_dataloader, test_dataloader, dimen
     print(f"Testing fine tuning on {method}...")
     ft_lpf_model_clone = copy.deepcopy(nn_model)
     test_fine_tuning(ft_lpf_model_clone, device, test_dataloader, df_adv_lpf_test, lpf_test_data,method, settings)
+    orig_examples_lpf_test, df_adv_lpf_test, *lpf_test_data = gen_adv(nn_model, settings, method,
+                                                                      settings['TestData'], n=settings['n_train_adv'])
     real_sr_ft, adv_sr_ft = test_svm_discriminator(settings, ft_lpf_model_clone, method, settings['TrainData'], orig_examples_lpf_test, df_adv_lpf_test)
-
+    test_svm_model(settings, device, nn_model, method, settings['TrainData'],
+                   df_adv_lpf_test.astype(np.float32), orig_examples_lpf_test)
     print(f"Success rate after FT: real data - {real_sr_ft}, adv data - {adv_sr_ft}")
 
 def def_tabnet_model(settings, device, method):
