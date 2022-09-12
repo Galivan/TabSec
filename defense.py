@@ -184,17 +184,21 @@ def def_tabnet_model(settings, device, method):
                                                                   settings['MaxIters'],
                                                                   method)
     settings['test_string'] = test_string
-    settings['dataset_name'] = 'credit-g'
-    settings['Target'] = 'target'
+    settings['dataset_name'] = 'census-income'
+    settings['Target'] = ' <=50K'
     plt.figure(figsize=(15, 10))
 
     settings = prepare_data(settings)
     tabnet_model = trainer.get_trained_tabnet_model(settings)
     settings["Model"] = tabnet_model
-
+    print("Testing Model")
     tabnet_acc = tester.test_tabnet_model(tabnet_model, settings, settings['TestData'])
 
     # Generate adversarial examples
+    print("Generating adversarial examples for training...")
+    orig_df_train, adv_df_train, *adv_train_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
+                                                                   settings['TrainData'],
+                                                                   n=settings['n_train_adv'])
     print("Generating adversarial examples for testing...")
     orig_df_test, adv_df_test, *adv_test_data = adverse_tabnet.gen_adv(tabnet_model, settings, method,
                                                                              settings['TestData'],
@@ -210,7 +214,6 @@ def def_tabnet_model(settings, device, method):
     test_tabnet_svm_model(settings, tabnet_model, method, settings['TrainData'], adv_df_test, orig_df_test)
 
     print(f"Testing fine tuning on {method}...")
-    ft_model_clone = copy.deepcopy(tabnet_model)
-    test_fine_tuning_tabnet(ft_model_clone, device, settings['TestData'], adv_df_test, adv_test_data, method, settings)
-    test_tabnet_svm_model(settings, ft_model_clone, method, settings['TrainData'], adv_df_test, orig_df_test)
+    test_fine_tuning_tabnet(tabnet_model, device, settings['TestData'], adv_df_train, adv_test_data, method, settings)
+    test_tabnet_svm_model(settings, tabnet_model, method, settings['TrainData'], adv_df_test, orig_df_test)
 

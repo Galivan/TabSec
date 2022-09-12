@@ -1,27 +1,41 @@
-import torch
+import os
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
+import wget as wget
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import fetch_openml
 
-from helpers.preproccesing_tabnet_attack import get_weights, normalize, get_bounds
+from helpers.preproccesing_tabnet_attack import get_weights, get_bounds
+from preprocess_data import normalize
 
 def prepare_data(config):
     dataset_name = config['dataset_name']
     target = config['Target']
+    if dataset_name == 'credit-g':
+        dataset = fetch_openml(dataset_name)
 
-    print(f'target is {target}')
-     
-    dataset = fetch_openml(dataset_name)
+        data = pd.DataFrame(data= np.c_[dataset['data'], dataset[target]],
+                            columns= dataset['feature_names'] + [target])
+        data[target] = data[target].apply(lambda x : 0.0 if x == 'bad' or x == 0.0 else 1)
 
-    data = pd.DataFrame(data= np.c_[dataset['data'], dataset[target]],
-                    columns= dataset['feature_names'] + [target]) 
+    else:
+        url = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+        out = Path(os.getcwd()+'/data/'+dataset_name+'.csv')
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if out.exists():
+            print("File already exists.")
+        else:
+            print("Downloading file...")
+            wget.download(url, out.as_posix())
+        data = pd.read_csv(out)
+        data[target] = data[target].apply(lambda x : 0.0 if x == ' <=50K' or x == 0.0 else 1)
 
-    # Renaming target for training later
-    data[target] = data[target].apply(lambda x : 0.0 if x == 'bad' or x == 0.0 else 1)
 
+# Renaming target for training later
     config['Data'] = data
 
     # Normalize the data
@@ -31,10 +45,12 @@ def prepare_data(config):
     label_and_encode_cat_features(config)
     define_categorical_for_embedding(config)
 
-    split_data(config)
     config['Weights'] = get_weights(data, target)
     config['Bounds'] = get_bounds(data)
-
+    scaler, dataframe, bounds = normalize(config['Data'], target, config['FeatureNames'], config['Bounds'], config['scale_max'])
+    config['Bounds'] = bounds
+    config['Data'] = dataframe
+    split_data(config)
     return config
 
 def split_data(config):
@@ -63,7 +79,7 @@ def label_and_encode_cat_features(config):
             categorical_columns.append(col)
             categorical_dims[col] = len(l_enc.classes_)
         else:
-            data.fillna(data.loc[col].mean(), inplace=True)
+            data.fillna(data[col].mean(), inplace=True)
     config['categorical_columns'] = categorical_columns
     config['categorical_dims'] = categorical_dims
 

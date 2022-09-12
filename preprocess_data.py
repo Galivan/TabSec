@@ -19,12 +19,12 @@ def normalize(df, target, feature_names, bounds, scale_max):
     scaler = MinMaxScaler((0, scale_max))
     X = df_return[feature_names]
     scaler.fit(X)    
-    df_return[feature_names] = scaler.transform(X)
+    df_return[feature_names] = scaler.transform(X).astype(np.float32)
     
     lower_bounds = scaler.transform([bounds[0]])
     upper_bounds = scaler.transform([bounds[1]])
 
-    return scaler, df_return, (lower_bounds[0], upper_bounds[0])
+    return scaler, df_return.astype(np.float32), (lower_bounds[0], upper_bounds[0])
 
 def get_weights(df, target, show_heatmap=False):
     def heatmap(cor):

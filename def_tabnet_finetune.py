@@ -1,12 +1,14 @@
 import os
 
 import numpy as np
+import torch
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 
 import metrics
 from adverse_tabnet import gen_adv
 from pytorch_tabnet.augmentations import ClassificationSMOTE
+from pytorch_tabnet.tab_model import TabNetClassifier
 from tabular_dataset import TabularDataset
 from trainer import train_bce_adam_model
 from tester import test_bce_model, test_tabnet_model
@@ -34,21 +36,37 @@ def fine_tune_tabnet(model, device, adverse_data, settings):
     y = adverse_data[target]
     X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=settings['Seed'], stratify=y)
     max_epochs = settings['epochs'] if not os.getenv("CI", False) else 2
-
+    max_epochs=60
     aug = ClassificationSMOTE(p=0.2)
+    cat_idxs = settings['cat_idxs']
+    cat_dims = settings['cat_dims']
+    tabnet_params = {"cat_idxs":cat_idxs,
+                     "cat_dims":cat_dims,
+                     "cat_emb_dim":1,
+                     "optimizer_fn":torch.optim.Adam,
+                     "optimizer_params":dict(lr=2e-3),
+                     "scheduler_params":{"step_size":20, # how to use learning rate scheduler
+                                         "gamma":0.9},
+                     "scheduler_fn":torch.optim.lr_scheduler.StepLR,
+                     "mask_type":'entmax' # "sparsemax"
+                     }
 
-    model.fit(
+    ft_model = TabNetClassifier(**tabnet_params)
+
+    ft_model.fit(
         X_train=X_train.values, y_train=y_train.values,
         eval_set=[(X_train.values, y_train.values), (X_valid.values, y_valid.values)],
         eval_name=['train', 'valid'],
         eval_metric=['auc'],
-        max_epochs=max_epochs, patience=int(max_epochs/5),
+        max_epochs=max_epochs, patience=int(max_epochs),
         batch_size=1024, virtual_batch_size=128,
         num_workers=0,
         weights=1,
         drop_last=False,
+        from_unsupervised=model,
         augmentations=aug, #aug, None
     )
+    return ft_model
 
 
 
@@ -64,11 +82,11 @@ def test_fine_tuning_tabnet(model, device, test_df, adv_examples, adv_data_befor
     :param settings: General settings
     :return: None
     """
-    fine_tune_tabnet(model, device, adv_examples, settings)
-    test_data_after_ft = test_tabnet_model(model, settings, test_df)
+    model = fine_tune_tabnet(model, device, adv_examples, settings)
+    test_data_after_ft = test_tabnet_model(model, settings, settings['TestData'])
 
     orig_examples, df_adv_lpf, *lpf_data_after_ft = gen_adv(model, settings, adv_name,
-                                                            settings['TestData'], n=int(0.5*settings['n_train_adv']))
+                                                            settings['TestData'], n=int(settings['n_test_adv']))
     lpf_data_after_ft.append(test_data_after_ft)
     mean_data_before = np.vectorize(np.mean)(np.array(adv_data_before, dtype=object))
     mean_data_after = np.vectorize(np.mean)(np.array(lpf_data_after_ft, dtype=object))

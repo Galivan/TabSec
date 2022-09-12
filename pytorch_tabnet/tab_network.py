@@ -862,7 +862,7 @@ class EmbeddingGenerator(torch.nn.Module):
                 cols.append(
                     self.embeddings[cat_feat_counter](x[:, feat_init_idx])
                 )
-            cat_feat_counter += 1
+                cat_feat_counter += 1
         # concat
         post_embeddings = torch.cat(cols, dim=1)
         return post_embeddings

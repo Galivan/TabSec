@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import keras
 import torch
 import numpy as np
@@ -100,6 +102,10 @@ def train_bce_adam_model(model, device, train_dataloader, lr, epochs):
 
 
 def get_trained_tabnet_model(config):
+    saving_path_name = "./tabnet_model_test_1_norm"
+    out = Path(saving_path_name+".zip")
+    out.parent.mkdir(parents=True, exist_ok=True)
+
     cat_idxs = config['cat_idxs']
     cat_dims = config['cat_dims']
 
@@ -121,6 +127,10 @@ def get_trained_tabnet_model(config):
 
     clf = TabNetClassifier(**tabnet_params
                            )
+    if out.exists():
+        print('Found saved model... loading')
+        clf.load_model(saving_path_name+".zip")
+        return clf
 
     X_train = train_data[features].values
     y_train = train_data[target].values
@@ -146,5 +156,6 @@ def get_trained_tabnet_model(config):
         drop_last=False,
         augmentations=aug, #aug, None
     )
+    clf.save_model(saving_path_name)
     save_history.append(clf.history["valid_auc"])
     return clf
